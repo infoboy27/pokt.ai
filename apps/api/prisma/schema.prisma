@@ -1,0 +1,108 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  auth0Sub  String   @unique @map("auth0_sub")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  orgMemberships OrgMember[]
+  ownedOrgs      Organization[] @relation("OrgOwner")
+
+  @@map("users")
+}
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  ownerId   String   @map("owner_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  owner     User        @relation("OrgOwner", fields: [ownerId], references: [id])
+  members   OrgMember[]
+  endpoints Endpoint[]
+  invoices  Invoice[]
+
+  @@map("organizations")
+}
+
+model OrgMember {
+  id       String @id @default(cuid())
+  orgId    String @map("org_id")
+  userId   String @map("user_id")
+  role     String // ADMIN, ORG_OWNER, DEV
+  joinedAt DateTime @default(now()) @map("joined_at")
+
+  // Relations
+  org  Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, userId])
+  @@map("org_members")
+}
+
+model Endpoint {
+  id         String   @id @default(cuid())
+  orgId      String   @map("org_id")
+  name       String
+  chainId    String   @map("chain_id") // F003, F00C, etc.
+  rateLimit  Int      @map("rate_limit")
+  tokenHash  String   @map("token_hash")
+  status     String   @default("active") // active, inactive, suspended
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  org    Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  usage  UsageDaily[]
+
+  @@map("endpoints")
+}
+
+model UsageDaily {
+  id         String   @id @default(cuid())
+  endpointId String   @map("endpoint_id")
+  date       DateTime
+  relays     Int
+  p95ms      Int      @map("p95_ms")
+  errorRate  Float    @map("error_rate")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  // Relations
+  endpoint Endpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+
+  @@unique([endpointId, date])
+  @@map("usage_daily")
+}
+
+model Invoice {
+  id               String   @id @default(cuid())
+  orgId            String   @map("org_id")
+  stripeInvoiceId  String   @unique @map("stripe_invoice_id")
+  periodStart      DateTime @map("period_start")
+  periodEnd        DateTime @map("period_end")
+  amount           Int      // Amount in cents
+  status           String   // draft, open, paid, void, uncollectible
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  org Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@map("invoices")
+}

@@ -1,0 +1,11 @@
+<svg width="200" height="60" viewBox="0 0 200 60" xmlns="http://www.w3.org/2000/svg">
+  <!-- Stylized "P" logo -->
+  <path d="M15 10 C15 5, 20 0, 25 0 L35 0 C40 0, 45 5, 45 10 L45 20 C45 25, 40 30, 35 30 L25 30 L25 50 L15 50 Z M25 10 L35 10 C37 10, 35 12, 35 15 L35 20 C35 23, 37 25, 35 25 L25 25 Z" 
+        fill="#192633"/>
+  
+  <!-- Text "pokt.ai" -->
+  <text x="55" y="32" font-family="Inter, -apple-system, BlinkMacSystemFont, sans-serif" 
+        font-size="24" font-weight="600" fill="#192633" letter-spacing="-0.5">
+    pokt.ai
+  </text>
+</svg>

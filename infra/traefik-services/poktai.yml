@@ -1,0 +1,35 @@
+http:
+  routers:
+    poktai-web:
+      rule: "Host(`pokt.ai`)"
+      service: poktai-web
+      entryPoints:
+        - websecure
+      tls: {}
+      priority: 1
+
+    poktai-api:
+      rule: "Host(`pokt.ai`) && PathPrefix(`/api`)"
+      service: poktai-api
+      entryPoints:
+        - websecure
+      tls: {}
+      middlewares:
+        - poktai-api-strip
+
+  middlewares:
+    poktai-api-strip:
+      stripPrefix:
+        prefixes:
+          - "/api"
+
+  services:
+    poktai-web:
+      loadBalancer:
+        servers:
+          - url: "http://web:4000"
+
+    poktai-api:
+      loadBalancer:
+        servers:
+          - url: "http://api:3001"

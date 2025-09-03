@@ -1,0 +1,110 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: pokt_ai
+      POSTGRES_USER: pokt_ai
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pokt_ai_password}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pokt_ai"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - poktia
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - poktia
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ../apps/api
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgresql://pokt_ai:${POSTGRES_PASSWORD:-pokt_ai_password}@postgres:5432/pokt_ai
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET}
+      AUTH0_DOMAIN: ${AUTH0_DOMAIN}
+      AUTH0_AUDIENCE: ${AUTH0_AUDIENCE}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
+      PORT: 3001
+      HOST: 0.0.0.0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - poktia
+      - lb
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.poktai-api.rule=Host(`${DOMAIN:-pokt.ai}`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.poktai-api.entrypoints=websecure"
+      - "traefik.http.routers.poktai-api.tls=true"
+      - "traefik.http.services.poktai-api.loadbalancer.server.port=3001"
+      - "traefik.http.middlewares.poktai-api-strip.stripprefix.prefixes=/api"
+      - "traefik.http.routers.poktai-api.middlewares=poktai-api-strip"
+
+  web:
+    build:
+      context: ../apps/web
+      dockerfile: Dockerfile
+    environment:
+      NEXT_PUBLIC_API_URL: https://${DOMAIN:-pokt.ai}/api
+      AUTH0_SECRET: ${AUTH0_SECRET}
+      AUTH0_BASE_URL: https://${DOMAIN:-pokt.ai}
+      AUTH0_ISSUER_BASE_URL: ${AUTH0_ISSUER_BASE_URL}
+      AUTH0_CLIENT_ID: ${AUTH0_CLIENT_ID}
+      AUTH0_CLIENT_SECRET: ${AUTH0_CLIENT_SECRET}
+      NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY}
+      PORT: 4000
+      HOST: 0.0.0.0
+    depends_on:
+      - api
+    networks:
+      - poktia
+      - lb
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.poktai-web.rule=Host(`${DOMAIN:-pokt.ai}`)"
+      - "traefik.http.routers.poktai-web.entrypoints=websecure"
+      - "traefik.http.routers.poktai-web.tls=true"
+      - "traefik.http.services.poktai-web.loadbalancer.server.port=4000"
+      - "traefik.http.routers.poktai-web.priority=1"
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  lb:
+    external: true
+  poktia:
+    external: true
+
+
+
+
+
+
+
+
