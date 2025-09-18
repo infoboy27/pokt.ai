@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowRight, Zap, Shield, Globe, BarChart3, Code, Sparkles, TrendingUp, Users, Clock, MessageCircle, ArrowUp } from 'lucide-react';
+import { ArrowRight, Zap, Shield, Globe, BarChart3, Code, Sparkles, TrendingUp, Users, Clock, MessageCircle, ArrowUp, ExternalLink, Search } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function LandingPage() {
@@ -68,6 +68,17 @@ export default function LandingPage() {
               <Link href="/docs" className="text-muted-foreground hover:text-foreground transition-colors">
                 Docs
               </Link>
+            </motion.div>
+            <motion.div whileHover={{ y: -2 }}>
+              <a 
+                href="https://explorer.pokt.ai" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+              >
+                Explorer
+                <ExternalLink className="w-3 h-3" />
+              </a>
             </motion.div>
 
             <motion.div whileHover={{ scale: 1.05 }}>
@@ -161,6 +172,19 @@ export default function LandingPage() {
               </Button>
             </Link>
           </motion.div>
+          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+            <a 
+              href="https://explorer.pokt.ai" 
+              target="_blank" 
+              rel="noopener noreferrer"
+            >
+              <Button variant="secondary" size="lg" className="text-lg px-8 py-6 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white border-0">
+                <Search className="mr-2 w-5 h-5" />
+                Explorer
+                <ExternalLink className="ml-2 w-4 h-4" />
+              </Button>
+            </a>
+          </motion.div>
         </motion.div>
 
         {/* Live stats */}
@@ -238,6 +262,137 @@ export default function LandingPage() {
             <p className="text-sm text-muted-foreground">Countries</p>
           </motion.div>
         </motion.div>
+      </motion.section>
+
+      {/* Supported Blockchains Banner */}
+      <motion.section 
+        className="py-16 bg-gradient-to-r from-slate-50 to-blue-50/50 relative overflow-hidden"
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        transition={{ duration: 0.8 }}
+        viewport={{ once: true }}
+      >
+        <div className="container mx-auto px-4">
+          <motion.div 
+            className="text-center mb-12"
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            viewport={{ once: true }}
+          >
+            <h2 className="font-heading text-3xl font-bold text-primary mb-4">
+              Supported Blockchain Networks
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Connect to 50+ blockchain networks with enterprise-grade reliability and lightning-fast performance
+            </p>
+          </motion.div>
+          
+          {/* Blockchain Network Grid */}
+          <motion.div 
+            className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-6 max-w-7xl mx-auto"
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+            viewport={{ once: true }}
+          >
+            {/* Major Networks */}
+            {[
+              { name: 'Ethereum', symbol: 'ETH', color: 'from-blue-500 to-blue-600' },
+              { name: 'Polygon', symbol: 'MATIC', color: 'from-purple-500 to-purple-600' },
+              { name: 'Arbitrum', symbol: 'ARB', color: 'from-blue-400 to-blue-500' },
+              { name: 'Optimism', symbol: 'OP', color: 'from-red-500 to-red-600' },
+              { name: 'Base', symbol: 'BASE', color: 'from-blue-600 to-indigo-600' },
+              { name: 'Avalanche', symbol: 'AVAX', color: 'from-red-400 to-red-500' },
+              { name: 'BSC', symbol: 'BNB', color: 'from-yellow-400 to-yellow-500' },
+              { name: 'Fantom', symbol: 'FTM', color: 'from-blue-500 to-cyan-500' },
+              { name: 'Solana', symbol: 'SOL', color: 'from-purple-400 to-pink-500' },
+              { name: 'Cosmos', symbol: 'ATOM', color: 'from-indigo-500 to-purple-600' },
+              { name: 'Gnosis', symbol: 'GNO', color: 'from-green-500 to-emerald-600' },
+              { name: 'Celo', symbol: 'CELO', color: 'from-green-400 to-green-500' },
+              { name: 'Blast', symbol: 'BLAST', color: 'from-yellow-500 to-orange-500' },
+              { name: 'Kava', symbol: 'KAVA', color: 'from-red-500 to-pink-500' },
+              { name: 'Oasys', symbol: 'OAS', color: 'from-teal-500 to-cyan-500' },
+              { name: 'POKT', symbol: 'POKT', color: 'from-indigo-600 to-blue-700' },
+            ].map((network, index) => (
+              <motion.div
+                key={network.name}
+                className="group"
+                initial={{ opacity: 0, scale: 0.8 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.5, delay: index * 0.05 }}
+                viewport={{ once: true }}
+                whileHover={{ scale: 1.05, y: -5 }}
+              >
+                <div className="bg-white rounded-xl p-4 shadow-md hover:shadow-lg transition-all duration-300 border border-gray-100 group-hover:border-primary/20">
+                  <motion.div 
+                    className={`w-12 h-12 rounded-lg bg-gradient-to-br ${network.color} flex items-center justify-center mb-3 mx-auto`}
+                    whileHover={{ rotate: 360 }}
+                    transition={{ duration: 0.6 }}
+                  >
+                    <span className="text-white font-bold text-sm">
+                      {network.symbol.slice(0, 3)}
+                    </span>
+                  </motion.div>
+                  <h3 className="text-sm font-semibold text-gray-800 text-center">
+                    {network.name}
+                  </h3>
+                </div>
+              </motion.div>
+            ))}
+          </motion.div>
+          
+          {/* View All Networks Button */}
+          <motion.div 
+            className="text-center mt-12"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.4 }}
+            viewport={{ once: true }}
+          >
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <a 
+                href="https://explorer.pokt.ai" 
+                target="_blank" 
+                rel="noopener noreferrer"
+              >
+                <Button variant="outline" className="px-8 py-3">
+                  <Globe className="mr-2 w-4 h-4" />
+                  View All Networks
+                  <ExternalLink className="ml-2 w-3 h-3" />
+                </Button>
+              </a>
+            </motion.div>
+          </motion.div>
+        </div>
+        
+        {/* Background decoration */}
+        <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+          <motion.div
+            className="absolute -top-20 -right-20 w-40 h-40 bg-gradient-to-br from-primary/10 to-secondary/10 rounded-full blur-3xl"
+            animate={{
+              scale: [1, 1.2, 1],
+              rotate: [0, 180, 360],
+            }}
+            transition={{
+              duration: 15,
+              repeat: Infinity,
+              ease: "linear"
+            }}
+          />
+          <motion.div
+            className="absolute -bottom-20 -left-20 w-32 h-32 bg-gradient-to-tr from-accent/10 to-primary/10 rounded-full blur-3xl"
+            animate={{
+              scale: [1.2, 1, 1.2],
+              rotate: [360, 180, 0],
+            }}
+            transition={{
+              duration: 20,
+              repeat: Infinity,
+              ease: "linear"
+            }}
+          />
+        </div>
       </motion.section>
 
       {/* Features Section */}
@@ -523,6 +678,17 @@ export default function LandingPage() {
                 <Link href="/docs" className="hover:text-foreground transition-colors">
                   Documentation
                 </Link>
+              </motion.div>
+              <motion.div whileHover={{ y: -2 }}>
+                <a 
+                  href="https://explorer.pokt.ai" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="hover:text-foreground transition-colors flex items-center gap-1"
+                >
+                  Explorer
+                  <ExternalLink className="w-3 h-3" />
+                </a>
               </motion.div>
               <motion.div whileHover={{ y: -2 }}>
                 <Link href="/changelog" className="hover:text-foreground transition-colors">
