@@ -54,15 +54,11 @@ export function BrandShell({ children }: { children: React.ReactNode }) {
         <div className="fixed inset-0 bg-black/20" onClick={() => setSidebarOpen(false)} />
         <div className="fixed inset-y-0 left-0 w-64 bg-white shadow-xl">
           <div className="flex h-16 items-center justify-between px-6 border-b">
-            <div className="flex items-center space-x-2">
-              <Image
-                src="/logo.svg"
-                alt="pokt.ai"
-                width={100}
-                height={30}
-                className="h-8 w-auto"
-              />
-            </div>
+            <Link href="/" className="flex items-center space-x-2 hover:opacity-80 transition-opacity duration-200">
+              <span className="text-xl font-bold" style={{ color: '#1E3A8A' }}>
+                pokt.ai
+              </span>
+            </Link>
             <Button
               variant="ghost"
               size="icon"
@@ -104,15 +100,11 @@ export function BrandShell({ children }: { children: React.ReactNode }) {
       <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col">
         <div className="flex flex-col flex-grow bg-white border-r border-border">
           <div className="flex h-16 items-center px-6 border-b">
-            <div className="flex items-center space-x-2">
-              <Image
-                src="/logo.svg"
-                alt="pokt.ai"
-                width={100}
-                height={30}
-                className="h-8 w-auto"
-              />
-            </div>
+            <Link href="/" className="flex items-center space-x-2 hover:opacity-80 transition-opacity duration-200">
+              <span className="text-xl font-bold" style={{ color: '#1E3A8A' }}>
+                pokt.ai
+              </span>
+            </Link>
           </div>
           <nav className="flex-1 px-3 py-6">
             <ul className="space-y-1">

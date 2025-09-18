@@ -1,0 +1,31 @@
+{
+  "name": "@poktai/runtime-auth",
+  "version": "1.0.0",
+  "description": "Runtime authentication and rate limiting for POKT.ai portal",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "argon2": "^0.31.2",
+    "@prisma/client": "^5.7.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3",
+    "@types/node": "^20.10.5"
+  },
+  "keywords": [
+    "poktai",
+    "auth",
+    "rate-limiting",
+    "rpc",
+    "blockchain"
+  ],
+  "author": "POKT.ai",
+  "license": "MIT"
+}
+
+

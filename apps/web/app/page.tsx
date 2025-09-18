@@ -52,13 +52,11 @@ export default function LandingPage() {
             whileHover={{ scale: 1.05 }}
             transition={{ type: "spring", stiffness: 400, damping: 10 }}
           >
-            <Image
-              src="/logo.svg"
-              alt="pokt.ai"
-              width={120}
-              height={36}
-              className="h-9 w-auto"
-            />
+            <Link href="/" className="flex items-center space-x-2 hover:opacity-80 transition-opacity duration-200">
+              <span className="text-2xl font-bold" style={{ color: '#1E3A8A' }}>
+                pokt.ai
+              </span>
+            </Link>
           </motion.div>
           <nav className="hidden md:flex items-center space-x-8">
             <motion.div whileHover={{ y: -2 }}>
@@ -73,12 +71,12 @@ export default function LandingPage() {
             </motion.div>
 
             <motion.div whileHover={{ scale: 1.05 }}>
-              <Link href="/app/dashboard">
+              <Link href="/login">
                 <Button variant="outline">Sign In</Button>
               </Link>
             </motion.div>
             <motion.div whileHover={{ scale: 1.05 }}>
-              <Link href="/app/dashboard">
+              <Link href="/login">
                 <Button>Get Started</Button>
               </Link>
             </motion.div>
@@ -140,7 +138,7 @@ export default function LandingPage() {
           transition={{ duration: 0.8, delay: 1 }}
         >
           <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            <Link href="/app/dashboard">
+            <Link href="/login">
               <Button size="lg" className="text-lg px-8 py-6 relative overflow-hidden group">
                 <motion.div
                   className="absolute inset-0 bg-gradient-to-r from-primary to-secondary opacity-0 group-hover:opacity-100 transition-opacity duration-300"
@@ -461,7 +459,7 @@ export default function LandingPage() {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
-            <Link href="/app/dashboard">
+            <Link href="/login">
               <Button size="lg" variant="secondary" className="text-lg px-8 py-6 relative overflow-hidden group">
                 <motion.div
                   className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
@@ -498,14 +496,16 @@ export default function LandingPage() {
               viewport={{ once: true }}
               whileHover={{ scale: 1.05 }}
             >
-              <motion.div 
-                className="w-6 h-6 bg-primary rounded flex items-center justify-center"
-                whileHover={{ rotate: 360 }}
-                transition={{ duration: 0.6 }}
-              >
-                <span className="text-white font-bold text-xs">P</span>
-              </motion.div>
-              <span className="font-heading text-lg font-semibold text-primary">pokt.ai</span>
+              <Link href="/" className="flex items-center space-x-2 hover:opacity-80 transition-opacity duration-200">
+                <motion.span 
+                  className="text-xl font-bold"
+                  style={{ color: '#1E3A8A' }}
+                  whileHover={{ scale: 1.05 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  pokt.ai
+                </motion.span>
+              </Link>
             </motion.div>
             <motion.div 
               className="flex space-x-6 text-sm text-muted-foreground"

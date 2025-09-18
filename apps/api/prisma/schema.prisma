@@ -10,6 +10,20 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Admin Users (Portal Administrators)
+model AdminUser {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  role      String   @default("admin") // owner, admin, viewer
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("admin_users")
+}
+
+// Customer Organizations (existing structure preserved)
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
@@ -56,24 +70,104 @@ model OrgMember {
   @@map("org_members")
 }
 
+// Portal Admin Models
 model Endpoint {
-  id         String   @id @default(cuid())
-  orgId      String   @map("org_id")
-  name       String
-  chainId    String   @map("chain_id") // F003, F00C, etc.
-  rateLimit  Int      @map("rate_limit")
-  tokenHash  String   @map("token_hash")
-  status     String   @default("active") // active, inactive, suspended
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
+  id            String   @id @default(cuid())
+  name          String   @unique
+  baseUrl       String   @map("base_url")
+  healthUrl     String   @map("health_url")
+  description   String?
+  isActive      Boolean  @default(true) @map("is_active")
+  orgId         String?  @map("org_id") // Optional for admin-managed endpoints
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
 
   // Relations
-  org    Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  usage  UsageDaily[]
+  org           Organization? @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  networks      Network[]
+  apiKeys       ApiKey[]
+  healthChecks  HealthCheck[]
 
   @@map("endpoints")
 }
 
+model Network {
+  id         String   @id @default(cuid())
+  code       String   // e.g., "eth", "bsc"
+  chainId    Int?     @map("chain_id")
+  rpcUrl     String   @map("rpc_url")
+  wsUrl      String?  @map("ws_url")
+  isTestnet  Boolean  @default(false) @map("is_testnet")
+  isEnabled  Boolean  @default(true) @map("is_enabled")
+  endpointId String   @map("endpoint_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  endpoint Endpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+  usages   Usage[]
+
+  @@index([endpointId, code], name: "idx_network_endpoint_code")
+  @@map("networks")
+}
+
+model ApiKey {
+  id         String   @id @default(cuid())
+  label      String
+  keyHash    String   @unique @map("key_hash") // store hash only
+  headerName String   @default("X-API-Key") @map("header_name")
+  rpsLimit   Int      @default(100) @map("rps_limit")
+  rpdLimit   Int      @default(1000000) @map("rpd_limit")
+  rpmLimit   Int      @default(30000000) @map("rpm_limit")
+  isActive   Boolean  @default(true) @map("is_active")
+  endpointId String   @map("endpoint_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  endpoint Endpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+  usages   Usage[]
+
+  @@map("api_keys")
+}
+
+model Usage {
+  id         String   @id @default(cuid())
+  apiKeyId   String   @map("api_key_id")
+  networkId  String?  @map("network_id")
+  tsMinute   DateTime @map("ts_minute") // minute bucket
+  count      Int      @default(0)
+  latencyP50 Float?   @map("latency_p50") // ms
+  latencyP95 Float?   @map("latency_p95")
+  errorRate  Float?   @map("error_rate") // 0..1
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  // Relations
+  apiKey  ApiKey   @relation(fields: [apiKeyId], references: [id], onDelete: Cascade)
+  network Network? @relation(fields: [networkId], references: [id])
+
+  @@unique([apiKeyId, tsMinute])
+  @@index([apiKeyId, networkId, tsMinute])
+  @@map("usage")
+}
+
+model HealthCheck {
+  id         String   @id @default(cuid())
+  endpointId String   @map("endpoint_id")
+  ok         Boolean
+  httpStatus Int?     @map("http_status")
+  latencyMs  Int?     @map("latency_ms")
+  checkedAt  DateTime @default(now()) @map("checked_at")
+  meta       Json?
+
+  // Relations
+  endpoint Endpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+
+  @@index([endpointId, checkedAt])
+  @@map("health_checks")
+}
+
+// Legacy models (preserved for backward compatibility)
 model UsageDaily {
   id         String   @id @default(cuid())
   endpointId String   @map("endpoint_id")
@@ -82,9 +176,6 @@ model UsageDaily {
   p95ms      Int      @map("p95_ms")
   errorRate  Float    @map("error_rate")
   createdAt  DateTime @default(now()) @map("created_at")
-
-  // Relations
-  endpoint Endpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
 
   @@unique([endpointId, date])
   @@map("usage_daily")

@@ -30,3 +30,7 @@ echo ""
 echo "To check status: docker-compose -f infra/docker-compose.yml ps"
 echo "To view logs: tail -f docker-compose.log"
 echo "To stop services: docker-compose -f infra/docker-compose.yml down"
+
+
+
+

@@ -1,15 +1,16 @@
 FROM node:18-alpine
 
-# Install OpenSSL and other required dependencies for Prisma
-RUN apk add --no-cache openssl
+# Install OpenSSL, curl for health checks, and other required dependencies
+RUN apk add --no-cache openssl curl
 
 WORKDIR /app
 
 # Copy package files
 COPY apps/api/package.json ./
+COPY apps/api/pnpm-lock.yaml ./
 
-# Install dependencies
-RUN npm install
+# Install pnpm and dependencies
+RUN npm install -g pnpm && pnpm install
 
 # Copy source code
 COPY apps/api/src ./src
@@ -25,5 +26,5 @@ EXPOSE 3001
 ENV NODE_ENV development
 ENV PORT=3001
 
-# Use development mode
-CMD ["npm", "run", "start:dev"]
+# Use development mode with pnpm
+CMD ["pnpm", "run", "start:dev"]

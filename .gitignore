@@ -105,3 +105,37 @@ prisma/migrations/
 
 # Stripe
 .stripe/
+
+# Certificates and sensitive files
+*.pem
+*.key
+*.crt
+acme.json
+loadbalancer/certs/
+loadbalancer/services/certs/
+
+# Logs
+*.log
+docker-compose.log
+
+# Temporary files
+.DS_Store
+.env.local
+.env.production
+.env.test
+
+# Runtime
+dist/
+build/
+.next/
+node_modules/
+coverage/
+.nyc_output/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+

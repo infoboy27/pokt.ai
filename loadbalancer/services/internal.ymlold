@@ -1,0 +1,22 @@
+# ./services/internal.yml
+http:
+  routers:
+    traefik-dashboard:
+      rule: Host(`traefik.pokt.ai`)
+      entryPoints: [websecure]
+      tls:
+        certResolver: https-resolver
+      service: api@internal
+      middlewares: [traefik-auth]
+
+    traefik-ping:
+      rule: PathPrefix(`/ping`)
+      entryPoints: [ping]
+      service: ping@internal
+
+  middlewares:
+    traefik-auth:
+      basicAuth:
+        users:
+          # Genera tu hash con: htpasswd -nbB admin 'TU_PASSWORD'
+          - "admin:$2y$05$DKTjCq8CKni.rQ8S9DrLjefGwxpbty5F5G5s2/CQylEUNS/hqomXK"

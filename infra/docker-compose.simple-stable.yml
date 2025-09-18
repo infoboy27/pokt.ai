@@ -1,0 +1,111 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: pokt_ai
+      POSTGRES_USER: pokt_ai
+      POSTGRES_PASSWORD: pokt_ai_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pokt_ai"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - backend
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - backend
+    # Add security configuration
+    command: redis-server --requirepass pokt_ai_redis_password --bind 0.0.0.0
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ..
+      dockerfile: apps/api/Dockerfile
+    environment:
+      DATABASE_URL: postgresql://pokt_ai:pokt_ai_password@postgres:5432/pokt_ai
+      REDIS_URL: redis://:pokt_ai_redis_password@redis:6379
+      JWT_SECRET: your-super-secret-jwt-key-change-in-production
+      PORT: 3001
+      HOST: 0.0.0.0
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - backend
+      - lb
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.poktai-api.rule=Host(`pokt.ai`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.poktai-api.entrypoints=websecure"
+      - "traefik.http.routers.poktai-api.tls=true"
+      - "traefik.http.services.poktai-api.loadbalancer.server.port=3001"
+      - "traefik.http.middlewares.poktai-api-strip.stripprefix.prefixes=/api"
+      - "traefik.http.routers.poktai-api.middlewares=poktai-api-strip"
+
+  web:
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+    environment:
+      # Use Docker service name for API connection
+      NEXT_PUBLIC_API_URL: http://api:3001/api
+      AUTH0_SECRET: your-auth0-secret-change-in-production
+      AUTH0_BASE_URL: https://pokt.ai
+      AUTH0_ISSUER_BASE_URL: https://your-tenant.auth0.com
+      AUTH0_CLIENT_ID: your-auth0-client-id
+      AUTH0_CLIENT_SECRET: your-auth0-client-secret
+      PORT: 4000
+      HOST: 0.0.0.0
+      # Admin key for admin access
+      NEXT_PUBLIC_ADMIN_KEY: "poktai_admin_2024"
+      # Database connection for admin portal
+      DATABASE_URL: "postgresql://pokt_ai:pokt_ai_password@postgres:5432/pokt_ai"
+    ports:
+      - "3005:4000"
+    depends_on:
+      - api
+    restart: unless-stopped
+    networks:
+      - backend
+      - lb
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.poktai-web.rule=Host(`pokt.ai`)"
+      - "traefik.http.routers.poktai-web.entrypoints=websecure"
+      - "traefik.http.routers.poktai-web.tls=true"
+      - "traefik.http.services.poktai-web.loadbalancer.server.port=4000"
+      - "traefik.http.routers.poktai-web.priority=1"
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  lb:
+    external: true
+  backend:
+    name: poktai_backend
+    driver: bridge
+
+

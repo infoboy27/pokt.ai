@@ -1,0 +1,34 @@
+<svg width="200" height="60" viewBox="0 0 200 60" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3B82F6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#8B5CF6;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Minimalist icon -->
+  <g transform="translate(10, 10)">
+    <!-- Hexagon representing network node -->
+    <path d="M20 5 L30 10 L30 20 L20 25 L10 20 L10 10 Z" 
+          fill="url(#gradient)" opacity="0.1"/>
+    <path d="M20 5 L30 10 L30 20 L20 25 L10 20 L10 10 Z" 
+          fill="none" stroke="url(#gradient)" stroke-width="2"/>
+    
+    <!-- Central "P" -->
+    <path d="M15 8 C15 6, 17 4, 19 4 L25 4 C27 4, 29 6, 29 8 L29 16 C29 18, 27 20, 25 20 L19 20 L19 28 L15 28 Z M19 8 L25 8 C26 8, 27 9, 27 10 L27 16 C27 17, 26 18, 25 18 L19 18 Z" 
+          fill="url(#gradient)"/>
+    
+    <!-- Network connection points -->
+    <circle cx="32" cy="12" r="1.5" fill="url(#gradient)" opacity="0.6"/>
+    <circle cx="35" cy="18" r="1" fill="url(#gradient)" opacity="0.4"/>
+    <circle cx="33" cy="22" r="0.8" fill="url(#gradient)" opacity="0.3"/>
+  </g>
+  
+  <!-- Clean typography -->
+  <text x="50" y="28" font-family="Inter, -apple-system, BlinkMacSystemFont, sans-serif" 
+        font-size="22" font-weight="600" fill="url(#gradient)" letter-spacing="-0.2">
+    pokt.ai
+  </text>
+</svg>
+
+
