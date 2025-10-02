@@ -3,13 +3,15 @@ version: "3.8"
 services:
   postgres:
     image: postgres:15-alpine
+    env_file:
+      - .env
     environment:
-      POSTGRES_DB: pokt_ai
-      POSTGRES_USER: pokt_ai
-      POSTGRES_PASSWORD: pokt_ai_password
-    # Expose PostgreSQL port for web app admin API access
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    # PostgreSQL port only exposed in development
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -24,9 +26,11 @@ services:
 
   redis:
     image: redis:7-alpine
-    # Expose Redis port for API access
+    env_file:
+      - .env
+    # Redis port only exposed in development
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -37,21 +41,22 @@ services:
     networks:
       - backend
     # Add security configuration
-    command: redis-server --requirepass pokt_ai_redis_password --bind 0.0.0.0
+    command: redis-server --requirepass ${REDIS_PASSWORD} --bind 0.0.0.0
 
   api:
     build:
       context: ..
       dockerfile: apps/api/Dockerfile
+    env_file:
+      - .env
     environment:
-      DATABASE_URL: postgresql://pokt_ai:pokt_ai_password@postgres:5432/pokt_ai
-      REDIS_URL: redis://:pokt_ai_redis_password@redis:6379
-      JWT_SECRET: your-super-secret-jwt-key-change-in-production
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
       PORT: 3001
       HOST: 0.0.0.0
-    # Expose API service for debugging
+    # API service port only exposed in development
     ports:
-      - "3001:3001"
+      - "${API_PORT:-3001}:3001"
     depends_on:
       postgres:
         condition: service_healthy
@@ -85,19 +90,17 @@ services:
     build:
       context: ..
       dockerfile: apps/web/Dockerfile
+    env_file:
+      - .env
     environment:
       # Use Docker service name for API connection
       NEXT_PUBLIC_API_URL: http://api:3001/api
-      AUTH0_SECRET: your-auth0-secret-change-in-production
       AUTH0_BASE_URL: https://pokt.ai
-      AUTH0_ISSUER_BASE_URL: https://your-tenant.auth0.com
-      AUTH0_CLIENT_ID: your-auth0-client-id
-      AUTH0_CLIENT_SECRET: your-auth0-client-secret
       PORT: 4000
       HOST: 0.0.0.0
-    # Expose web service on port 3005
+    # Web service port only exposed in development
     ports:
-      - "3005:4000"
+      - "${WEB_PORT:-3005}:4000"
     depends_on:
       api:
         condition: service_healthy
@@ -109,9 +112,9 @@ services:
       retries: 5
       start_period: 60s
     volumes:
-      - ../apps/web:/app
-      - /app/node_modules
-      - /app/.next
+      - ../apps/web:/app/apps/web
+      - /app/apps/web/node_modules
+      - /app/apps/web/.next
     # Forzamos Next a escuchar en 0.0.0.0:4000
     # command: sh -lc "next dev -p ${PORT:-4000} -H ${HOST:-0.0.0.0}"
     networks:
@@ -138,9 +141,26 @@ services:
   #   profiles:
   #     - production
 
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@pokt.ai
+      PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - postgres
+    networks:
+      - backend
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   redis_data:
+  pgadmin_data:
 
 networks:
   lb:

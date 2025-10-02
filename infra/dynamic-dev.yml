@@ -2,7 +2,7 @@ http:
   routers:
     # HTTP to HTTPS redirect
     poktai-web-redirect:
-      rule: "Host(`pokt.ai`)"
+      rule: "Host(`localhost`) || Host(`pokt.ai`) || Host(`www.pokt.ai`)"
       service: poktai-web-redirect
       entryPoints:
         - web
@@ -11,7 +11,7 @@ http:
 
     # Main web application
     poktai-web:
-      rule: "Host(`pokt.ai`)"
+      rule: "Host(`localhost`) || Host(`pokt.ai`) || Host(`www.pokt.ai`)"
       service: poktai-web
       entryPoints:
         - websecure
@@ -20,20 +20,9 @@ http:
       middlewares:
         - security-headers
 
-    # Auth API routes (served by web service)
-    poktai-auth-api:
-      rule: "Host(`pokt.ai`) && PathPrefix(`/api/auth`)"
-      service: poktai-web
-      entryPoints:
-        - websecure
-      tls: {}
-      middlewares:
-        - security-headers
-      priority: 20
-
     # Admin API routes (served by web service)
     poktai-admin-api:
-      rule: "Host(`pokt.ai`) && PathPrefix(`/api/admin`)"
+      rule: "(Host(`localhost`) || Host(`pokt.ai`) || Host(`www.pokt.ai`)) && PathPrefix(`/api/admin`)"
       service: poktai-web
       entryPoints:
         - websecure
@@ -44,13 +33,12 @@ http:
 
     # Regular API routes (served by API service)
     poktai-api:
-      rule: "Host(`pokt.ai`) && PathPrefix(`/api`)"
+      rule: "(Host(`localhost`) || Host(`pokt.ai`) || Host(`www.pokt.ai`)) && PathPrefix(`/api`)"
       service: poktai-api
       entryPoints:
         - websecure
       tls: {}
       middlewares:
-        - poktai-api-strip
         - security-headers
         - rate-limit
       priority: 10
@@ -64,12 +52,6 @@ http:
 
     # Strip /api prefix for backend
     poktai-api-strip:
-      stripPrefix:
-        prefixes:
-          - "/api"
-
-    # Strip /api prefix for admin routes
-    poktai-admin-strip:
       stripPrefix:
         prefixes:
           - "/api"
@@ -125,5 +107,3 @@ http:
           path: "/api/health"
           interval: "30s"
           timeout: "5s"
-
-
