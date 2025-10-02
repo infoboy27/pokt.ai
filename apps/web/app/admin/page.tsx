@@ -62,7 +62,6 @@ export default function AdminDashboard() {
           usage: { totalRequests: 1250000, avgLatency: 42, errorRate: 0.2 },
         });
       } catch (error) {
-        console.error('Failed to fetch dashboard stats:', error);
       } finally {
         setLoading(false);
       }
@@ -103,7 +102,7 @@ export default function AdminDashboard() {
               <Badge variant="secondary" className="text-green-600 bg-green-100">
                 {stats?.endpoints.active} active
               </Badge>
-              {stats?.endpoints.inactive > 0 && (
+              {(stats?.endpoints.inactive || 0) > 0 && (
                 <Badge variant="secondary" className="text-red-600 bg-red-100">
                   {stats?.endpoints.inactive} inactive
                 </Badge>
@@ -124,7 +123,7 @@ export default function AdminDashboard() {
               <Badge variant="secondary" className="text-green-600 bg-green-100">
                 {stats?.apiKeys.active} active
               </Badge>
-              {stats?.apiKeys.inactive > 0 && (
+              {(stats?.apiKeys.inactive || 0) > 0 && (
                 <Badge variant="secondary" className="text-red-600 bg-red-100">
                   {stats?.apiKeys.inactive} inactive
                 </Badge>
@@ -145,7 +144,7 @@ export default function AdminDashboard() {
               <Badge variant="secondary" className="text-green-600 bg-green-100">
                 {stats?.networks.enabled} enabled
               </Badge>
-              {stats?.networks.disabled > 0 && (
+              {(stats?.networks.disabled || 0) > 0 && (
                 <Badge variant="secondary" className="text-red-600 bg-red-100">
                   {stats?.networks.disabled} disabled
                 </Badge>

@@ -13,25 +13,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Delete the endpoint and get final billing info
+    // Delete the endpoint
     const result = deletePermanentEndpoint(endpointId);
     
-    if (!result.success) {
+    if (!result) {
       return NextResponse.json(
-        { error: result.error },
+        { error: 'Endpoint not found' },
         { status: 404 }
       );
     }
 
-    console.log(`[pokt.ai] ENDPOINT DELETED: ${endpointId} [Final Bill: ${result.deletedEndpoint?.finalBill?.relays || 0} relays]`);
 
     return NextResponse.json({
       message: 'Endpoint deleted successfully',
-      deletedEndpoint: result.deletedEndpoint,
     });
 
   } catch (error) {
-    console.error('Delete Error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

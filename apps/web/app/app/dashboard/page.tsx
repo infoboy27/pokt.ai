@@ -1,9 +1,3 @@
-'use client';
-
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { BarChart3, Server, Users, CreditCard } from 'lucide-react';
-
 export default function DashboardPage() {
   return (
     <div className="space-y-6">
@@ -15,108 +9,105 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Relays</CardTitle>
-            <BarChart3 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">1,234,567</div>
+        <div className="rounded-lg border bg-card text-card-foreground shadow-sm">
+          <div className="flex flex-row items-center justify-between space-y-0 p-6 pb-2">
+            <p className="text-sm font-medium leading-none tracking-tight">Total Relays</p>
+            <div className="h-4 w-4 text-muted-foreground">📊</div>
+          </div>
+          <div className="p-6 pt-0">
+            <div className="text-2xl font-bold">4.7M</div>
             <p className="text-xs text-muted-foreground">
-              +20.1% from last month
+              +12.3% from last month
             </p>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Endpoints</CardTitle>
-            <Server className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">12</div>
+        <div className="rounded-lg border bg-card text-card-foreground shadow-sm">
+          <div className="flex flex-row items-center justify-between space-y-0 p-6 pb-2">
+            <p className="text-sm font-medium leading-none tracking-tight">Monthly Cost</p>
+            <div className="h-4 w-4 text-muted-foreground">💳</div>
+          </div>
+          <div className="p-6 pt-0">
+            <div className="text-2xl font-bold">$474.75</div>
             <p className="text-xs text-muted-foreground">
-              +2 new this month
+              Enterprise plan
             </p>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Team Members</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">8</div>
+        <div className="rounded-lg border bg-card text-card-foreground shadow-sm">
+          <div className="flex flex-row items-center justify-between space-y-0 p-6 pb-2">
+            <p className="text-sm font-medium leading-none tracking-tight">Active Endpoints</p>
+            <div className="h-4 w-4 text-muted-foreground">🖥️</div>
+          </div>
+          <div className="p-6 pt-0">
+            <div className="text-2xl font-bold">4</div>
+            <p className="text-xs text-muted-foreground">
+              +1 new this month
+            </p>
+          </div>
+        </div>
+
+        <div className="rounded-lg border bg-card text-card-foreground shadow-sm">
+          <div className="flex flex-row items-center justify-between space-y-0 p-6 pb-2">
+            <p className="text-sm font-medium leading-none tracking-tight">Team Members</p>
+            <div className="h-4 w-4 text-muted-foreground">👥</div>
+          </div>
+          <div className="p-6 pt-0">
+            <div className="text-2xl font-bold">3</div>
             <p className="text-xs text-muted-foreground">
               +1 new member
             </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Monthly Cost</CardTitle>
-            <CreditCard className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">$49.00</div>
-            <p className="text-xs text-muted-foreground">
-              Pro plan
-            </p>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        <Card className="col-span-4">
-          <CardHeader>
-            <CardTitle>Overview</CardTitle>
-            <CardDescription>
+        <div className="col-span-4 rounded-lg border bg-card text-card-foreground shadow-sm">
+          <div className="p-6">
+            <h3 className="text-lg font-semibold">Overview</h3>
+            <p className="text-sm text-muted-foreground mb-4">
               Your RPC gateway performance over the last 30 days
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pl-2">
-            <div className="h-[200px] flex items-center justify-center text-muted-foreground">
-              Chart placeholder - Performance metrics will be displayed here
+            </p>
+            <div className="h-[200px] flex items-center justify-center bg-muted rounded">
+              <p className="text-muted-foreground">📈 Usage Chart - 4.7M total relays</p>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        <Card className="col-span-3">
-          <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
-            <CardDescription>
+        <div className="col-span-3 rounded-lg border bg-card text-card-foreground shadow-sm">
+          <div className="p-6">
+            <h3 className="text-lg font-semibold">Recent Activity</h3>
+            <p className="text-sm text-muted-foreground mb-4">
               Latest events and updates
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+            </p>
             <div className="space-y-4">
-              <div className="flex items-center space-x-4">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <div className="flex-1 space-y-1">
-                  <p className="text-sm font-medium">New endpoint created</p>
+              <div className="flex items-center">
+                <div className="w-2 h-2 rounded-full mr-3 bg-green-500"></div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium">Endpoint created with 4,747,487 total relays</p>
+                  <p className="text-xs text-muted-foreground">30 minutes ago</p>
+                </div>
+              </div>
+              <div className="flex items-center">
+                <div className="w-2 h-2 rounded-full mr-3 bg-blue-500"></div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium">Generated $474.75 in usage costs this month</p>
                   <p className="text-xs text-muted-foreground">2 hours ago</p>
                 </div>
               </div>
-              <div className="flex items-center space-x-4">
-                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                <div className="flex-1 space-y-1">
-                  <p className="text-sm font-medium">Usage threshold reached</p>
+              <div className="flex items-center">
+                <div className="w-2 h-2 rounded-full mr-3 bg-purple-500"></div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium">demo@pokt.ai joined the organization</p>
                   <p className="text-xs text-muted-foreground">1 day ago</p>
                 </div>
               </div>
-              <div className="flex items-center space-x-4">
-                <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                <div className="flex-1 space-y-1">
-                  <p className="text-sm font-medium">Team member invited</p>
-                  <p className="text-xs text-muted-foreground">3 days ago</p>
-                </div>
-              </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
+
     </div>
   );
 }

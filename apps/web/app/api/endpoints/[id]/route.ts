@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getPermanentEndpoint, deletePermanentEndpoint } from '@/lib/simple-database';
+import { endpointQueries } from '@/lib/database';
 
 // DELETE /api/endpoints/[id] - Delete endpoint permanently
 export async function DELETE(
@@ -13,7 +13,7 @@ export async function DELETE(
     // In production, add proper authentication here
     
     // Check if endpoint exists
-    const endpoint = getPermanentEndpoint(id);
+    const endpoint = await endpointQueries.findById(id);
     if (!endpoint) {
       return NextResponse.json(
         { error: 'Endpoint not found' },
@@ -22,7 +22,7 @@ export async function DELETE(
     }
 
     // Delete endpoint (mark as inactive)
-    const success = deletePermanentEndpoint(id);
+    const success = await endpointQueries.delete(id);
     
     if (!success) {
       return NextResponse.json(
@@ -46,7 +46,6 @@ export async function DELETE(
     });
 
   } catch (error) {
-    console.error('Delete endpoint error:', error);
     return NextResponse.json(
       { error: 'Failed to delete endpoint' },
       { status: 500 }
@@ -61,7 +60,7 @@ export async function GET(
 ) {
   try {
     const { id } = params;
-    const endpoint = getPermanentEndpoint(id);
+    const endpoint = await endpointQueries.findById(id);
     
     if (!endpoint) {
       return NextResponse.json(
@@ -73,22 +72,21 @@ export async function GET(
     return NextResponse.json({
       id: endpoint.id,
       name: endpoint.name,
-      chainId: endpoint.chainId,
+      chainId: endpoint.chain_id,
       endpointUrl: `https://pokt.ai/api/gateway?endpoint=${endpoint.id}`,
-      rateLimit: endpoint.rateLimit,
-      status: endpoint.status,
-      createdAt: endpoint.createdAt,
+      rateLimit: endpoint.rate_limit,
+      status: endpoint.is_active ? 'active' : 'inactive',
+      createdAt: endpoint.created_at,
       billing: {
-        totalRelays: endpoint.totalRelays,
-        monthlyRelays: endpoint.monthlyRelays,
-        estimatedMonthlyCost: Math.round(endpoint.monthlyRelays * 0.0001 * 100),
-        estimatedMonthlyCostDollars: endpoint.monthlyRelays * 0.0001,
+        totalRelays: 0, // Will be calculated from usage table
+        monthlyRelays: 0, // Will be calculated from usage table
+        estimatedMonthlyCost: 0,
+        estimatedMonthlyCostDollars: 0,
       },
       // Don't expose token in GET requests
     });
 
   } catch (error) {
-    console.error('Get endpoint error:', error);
     return NextResponse.json(
       { error: 'Failed to retrieve endpoint' },
       { status: 500 }

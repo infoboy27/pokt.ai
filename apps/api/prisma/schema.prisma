@@ -25,12 +25,14 @@ model AdminUser {
 
 // Customer Organizations (existing structure preserved)
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  auth0Sub  String   @unique @map("auth0_sub")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id               String   @id @default(cuid())
+  email            String   @unique
+  name             String?
+  password         String?  // Hashed password for local auth
+  auth0Sub         String   @unique @map("auth0_sub")
+  stripeCustomerId String?  @unique @map("stripe_customer_id")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
 
   // Relations
   orgMemberships OrgMember[]

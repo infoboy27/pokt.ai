@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
 import { zJsonRpcRequest } from '@/lib/validations';
 import { requireAdmin } from '@/lib/admin-auth';
-
-const prisma = new PrismaClient();
 
 // POST /api/admin/test-rpc - Test JSON-RPC request
 export async function POST(request: NextRequest) {
@@ -110,7 +107,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.error('Error testing RPC request:', error);
     return NextResponse.json(
       { error: { code: 'INTERNAL_ERROR', message: 'Failed to test RPC request' } },
       { status: 500 }

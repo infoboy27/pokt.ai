@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,6 +15,8 @@ import {
   EyeOff,
   ArrowLeft
 } from 'lucide-react';
+import { login } from '@/lib/auth';
+import { trackUserLogin } from '@/lib/analytics';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -22,7 +24,18 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const router = useRouter();
+
+  useEffect(() => {
+    // Check if user just verified their email
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('verified') === 'true') {
+        setSuccess('Email verified successfully! You can now sign in.');
+      }
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,15 +43,16 @@ export default function LoginPage() {
     setError('');
 
     try {
-      // Simulate login API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Use the auth library to login
+      const result = await login(email, password);
       
-      // For demo purposes, accept any email/password
-      if (email && password) {
+      if (result.success) {
+        // Track successful login
+        trackUserLogin();
         // Redirect to dashboard
-        router.push('/app/dashboard');
+        router.push('/dashboard');
       } else {
-        setError('Please enter both email and password');
+        setError(result.message || 'Invalid email or password');
       }
     } catch (err) {
       setError('Login failed. Please try again.');
@@ -84,6 +98,11 @@ export default function LoginPage() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
+              {success && (
+                <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-md text-sm">
+                  {success}
+                </div>
+              )}
               {error && (
                 <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md text-sm">
                   {error}

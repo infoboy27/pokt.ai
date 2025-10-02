@@ -1,6 +1,30 @@
 // Simple database connection for permanent storage
 // Using direct PostgreSQL connection to existing database
 
+interface StoredOrganization {
+  id: string;
+  name: string;
+  plan: 'starter' | 'pro' | 'enterprise';
+  totalCustomers: number;
+  totalEndpoints: number;
+  monthlyUsage: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface StoredCustomer {
+  id: string;
+  name: string;
+  email: string;
+  organizationId: string;
+  plan: 'basic' | 'premium' | 'enterprise';
+  status: 'active' | 'suspended' | 'pending';
+  totalRelays: number;
+  monthlyRelays: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 interface StoredEndpoint {
   id: string;
   name: string;
@@ -9,9 +33,10 @@ interface StoredEndpoint {
   tokenHash: string;
   rateLimit: number;
   status: 'active' | 'inactive';
+  customerId: string;
+  organizationId: string;
   createdAt: string;
   updatedAt: string;
-  orgId: string;
   totalRelays: number;
   monthlyRelays: number;
 }
@@ -20,12 +45,16 @@ interface StoredEndpoint {
 import { writeFileSync, readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 
-const STORAGE_FILE = '/tmp/pokt-endpoints.json';
+const STORAGE_FILE = '/tmp/pokt-endpoints-new.json';
 
 interface StorageData {
+  organizations: StoredOrganization[];
+  customers: StoredCustomer[];
   endpoints: StoredEndpoint[];
   relayLogs: Array<{
     endpointId: string;
+    customerId: string;
+    organizationId: string;
     method: string;
     timestamp: string;
     latency: number;
@@ -40,53 +69,77 @@ function loadStorage(): StorageData {
       return JSON.parse(data);
     }
   } catch (error) {
-    console.error('Failed to load storage:', error);
   }
   
   return {
+    organizations: [
+      {
+        id: 'org_1',
+        name: 'Demo Organization',
+        plan: 'enterprise',
+        totalCustomers: 2,
+        totalEndpoints: 2,
+        monthlyUsage: 21000,
+        createdAt: '2024-01-01T00:00:00Z',
+        updatedAt: new Date().toISOString(),
+      }
+    ],
+    customers: [
+      {
+        id: 'cust_1',
+        name: 'Acme Corp',
+        email: 'admin@acme.com',
+        organizationId: 'org_1',
+        plan: 'enterprise',
+        status: 'active',
+        totalRelays: 12500,
+        monthlyRelays: 2500,
+        createdAt: '2024-01-15T00:00:00Z',
+        updatedAt: new Date().toISOString(),
+      },
+      {
+        id: 'cust_2',
+        name: 'TechStart Inc',
+        email: 'dev@techstart.com',
+        organizationId: 'org_1',
+        plan: 'premium',
+        status: 'active',
+        totalRelays: 8500,
+        monthlyRelays: 1200,
+        createdAt: '2024-02-01T00:00:00Z',
+        updatedAt: new Date().toISOString(),
+      }
+    ],
     endpoints: [
-      // Legacy endpoints for backward compatibility
       {
-        id: 'endpoint_1',
-        name: 'Ethereum Mainnet',
+        id: 'pokt_mg52bfax_6ec2d4a6829d',
+        name: 'Acme Ethereum Gateway',
         chainId: 'F003',
-        token: 'pokt_abc123def456',
+        token: 'sk_acme_ethereum_token_123',
         tokenHash: 'legacy_hash_1',
-        rateLimit: 1000,
+        rateLimit: 5000,
         status: 'active',
-        createdAt: '2024-01-15T10:30:00Z',
-        updatedAt: '2024-01-15T10:30:00Z',
-        orgId: 'org-1',
-        totalRelays: 0,
-        monthlyRelays: 0,
+        customerId: 'cust_1',
+        organizationId: 'org_1',
+        createdAt: '2025-09-29T11:45:50.656Z',
+        updatedAt: '2025-09-29T11:45:50.656Z',
+        totalRelays: 12500,
+        monthlyRelays: 2500,
       },
       {
-        id: 'endpoint_2',
-        name: 'Polygon',
+        id: 'pokt_mg52tysw_676931d7fe77',
+        name: 'TechStart Polygon Gateway',
         chainId: 'F00C',
-        token: 'pokt_xyz789uvw012',
+        token: 'sk_techstart_polygon_token_456',
         tokenHash: 'legacy_hash_2',
-        rateLimit: 500,
+        rateLimit: 2000,
         status: 'active',
-        createdAt: '2024-01-20T14:45:00Z',
-        updatedAt: '2024-01-20T14:45:00Z',
-        orgId: 'org-1',
-        totalRelays: 0,
-        monthlyRelays: 0,
-      },
-      {
-        id: 'endpoint_3',
-        name: 'BSC',
-        chainId: 'F00B',
-        token: 'pokt_mno345pqr678',
-        tokenHash: 'legacy_hash_3',
-        rateLimit: 750,
-        status: 'active',
-        createdAt: '2024-01-25T09:15:00Z',
-        updatedAt: '2024-01-25T09:15:00Z',
-        orgId: 'org-1',
-        totalRelays: 0,
-        monthlyRelays: 0,
+        customerId: 'cust_2',
+        organizationId: 'org_1',
+        createdAt: '2025-09-29T12:00:15.732Z',
+        updatedAt: '2025-09-29T12:00:15.732Z',
+        totalRelays: 8500,
+        monthlyRelays: 1200,
       },
     ],
     relayLogs: [],
@@ -97,7 +150,91 @@ function saveStorage(data: StorageData): void {
   try {
     writeFileSync(STORAGE_FILE, JSON.stringify(data, null, 2));
   } catch (error) {
-    console.error('Failed to save storage:', error);
+  }
+}
+
+// Organization Management
+export function createOrganization(data: Omit<StoredOrganization, 'createdAt' | 'updatedAt' | 'totalCustomers' | 'totalEndpoints' | 'monthlyUsage'>): StoredOrganization | null {
+  try {
+    const storage = loadStorage();
+    const now = new Date().toISOString();
+    
+    const organization: StoredOrganization = {
+      ...data,
+      totalCustomers: 0,
+      totalEndpoints: 0,
+      monthlyUsage: 0,
+      createdAt: now,
+      updatedAt: now,
+    };
+    
+    storage.organizations.push(organization);
+    saveStorage(storage);
+    
+    return organization;
+  } catch (error) {
+    return null;
+  }
+}
+
+export function getAllOrganizations(): StoredOrganization[] {
+  try {
+    const storage = loadStorage();
+    return storage.organizations;
+  } catch (error) {
+    return [];
+  }
+}
+
+// Customer Management
+export function createCustomer(data: Omit<StoredCustomer, 'createdAt' | 'updatedAt' | 'totalRelays' | 'monthlyRelays'>): StoredCustomer | null {
+  try {
+    const storage = loadStorage();
+    const now = new Date().toISOString();
+    
+    const customer: StoredCustomer = {
+      ...data,
+      totalRelays: 0,
+      monthlyRelays: 0,
+      createdAt: now,
+      updatedAt: now,
+    };
+    
+    storage.customers.push(customer);
+    
+    // Update organization stats
+    const orgIndex = storage.organizations.findIndex(org => org.id === data.organizationId);
+    if (orgIndex !== -1) {
+      storage.organizations[orgIndex].totalCustomers += 1;
+      storage.organizations[orgIndex].updatedAt = now;
+    }
+    
+    saveStorage(storage);
+    
+    return customer;
+  } catch (error) {
+    return null;
+  }
+}
+
+export function getAllCustomers(organizationId?: string): StoredCustomer[] {
+  try {
+    const storage = loadStorage();
+    if (organizationId) {
+      return storage.customers.filter(customer => customer.organizationId === organizationId);
+    }
+    return storage.customers;
+  } catch (error) {
+    return [];
+  }
+}
+
+export function getCustomer(customerId: string): StoredCustomer | null {
+  try {
+    const storage = loadStorage();
+    return storage.customers.find(customer => customer.id === customerId) || null;
+  } catch (error) {
+    return null;
   }
 }
 
@@ -115,12 +252,23 @@ export function createPermanentEndpoint(data: Omit<StoredEndpoint, 'createdAt' |
     };
     
     storage.endpoints.push(endpoint);
+    
+    // Update organization and customer stats
+    const orgIndex = storage.organizations.findIndex(org => org.id === data.organizationId);
+    if (orgIndex !== -1) {
+      storage.organizations[orgIndex].totalEndpoints += 1;
+      storage.organizations[orgIndex].updatedAt = now;
+    }
+    
+    const customerIndex = storage.customers.findIndex(customer => customer.id === data.customerId);
+    if (customerIndex !== -1) {
+      storage.customers[customerIndex].updatedAt = now;
+    }
+    
     saveStorage(storage);
     
-    console.log(`[BILLING] Created permanent endpoint: ${endpoint.id}`);
     return endpoint;
   } catch (error) {
-    console.error('Failed to create permanent endpoint:', error);
     return null;
   }
 }
@@ -130,17 +278,26 @@ export function getPermanentEndpoint(id: string): StoredEndpoint | null {
     const storage = loadStorage();
     return storage.endpoints.find(e => e.id === id && e.status === 'active') || null;
   } catch (error) {
-    console.error('Failed to get permanent endpoint:', error);
     return null;
   }
 }
 
-export function getAllPermanentEndpoints(orgId: string = 'org-1'): StoredEndpoint[] {
+export function getAllPermanentEndpoints(organizationId?: string, customerId?: string): StoredEndpoint[] {
   try {
     const storage = loadStorage();
-    return storage.endpoints.filter(e => e.orgId === orgId && e.status === 'active');
+    
+    let filtered = storage.endpoints.filter(e => e.status === 'active');
+    
+    if (organizationId) {
+      filtered = filtered.filter(e => e.organizationId === organizationId);
+    }
+    
+    if (customerId) {
+      filtered = filtered.filter(e => e.customerId === customerId);
+    }
+    
+    return filtered;
   } catch (error) {
-    console.error('Failed to get permanent endpoints:', error);
     return [];
   }
 }
@@ -151,7 +308,6 @@ export function getEndpointToken(endpointId: string): string | null {
     const endpoint = storage.endpoints.find(e => e.id === endpointId);
     return endpoint?.token || null;
   } catch (error) {
-    console.error('Failed to get endpoint token:', error);
     return null;
   }
 }
@@ -160,9 +316,17 @@ export function logRelay(endpointId: string, method: string, latency: number, su
   try {
     const storage = loadStorage();
     
-    // Add relay log
+    // Find endpoint to get customer and organization info
+    const endpoint = storage.endpoints.find(e => e.id === endpointId);
+    if (!endpoint) {
+      return false;
+    }
+    
+    // Add relay log with customer and organization tracking
     storage.relayLogs.push({
       endpointId,
+      customerId: endpoint.customerId,
+      organizationId: endpoint.organizationId,
       method,
       timestamp: new Date().toISOString(),
       latency,
@@ -170,18 +334,28 @@ export function logRelay(endpointId: string, method: string, latency: number, su
     });
     
     // Update endpoint relay counts
-    const endpoint = storage.endpoints.find(e => e.id === endpointId);
-    if (endpoint) {
-      endpoint.totalRelays += 1;
-      endpoint.monthlyRelays += 1; // Simplified - in production, calculate by month
-      endpoint.updatedAt = new Date().toISOString();
+    endpoint.totalRelays += 1;
+    endpoint.monthlyRelays += 1; // Simplified - in production, calculate by month
+    endpoint.updatedAt = new Date().toISOString();
+    
+    // Update customer relay counts
+    const customer = storage.customers.find(c => c.id === endpoint.customerId);
+    if (customer) {
+      customer.totalRelays += 1;
+      customer.monthlyRelays += 1;
+      customer.updatedAt = new Date().toISOString();
+    }
+    
+    // Update organization usage
+    const organization = storage.organizations.find(o => o.id === endpoint.organizationId);
+    if (organization) {
+      organization.monthlyUsage += 1;
+      organization.updatedAt = new Date().toISOString();
     }
     
     saveStorage(storage);
-    console.log(`[BILLING] Logged relay: ${endpointId} -> ${method} (${latency}ms) [${success ? 'SUCCESS' : 'ERROR'}]`);
     return true;
   } catch (error) {
-    console.error('Failed to log relay:', error);
     return false;
   }
 }
@@ -189,7 +363,7 @@ export function logRelay(endpointId: string, method: string, latency: number, su
 export function getMonthlyUsage(orgId: string, month: string): { totalRelays: number; totalCost: number; endpoints: Array<{ id: string; name: string; relays: number; cost: number }> } {
   try {
     const storage = loadStorage();
-    const endpoints = storage.endpoints.filter(e => e.orgId === orgId && e.status === 'active');
+    const endpoints = storage.endpoints.filter(e => e.organizationId === orgId && e.status === 'active');
     
     let totalRelays = 0;
     const endpointUsage = endpoints.map(endpoint => {
@@ -213,7 +387,6 @@ export function getMonthlyUsage(orgId: string, month: string): { totalRelays: nu
       endpoints: endpointUsage,
     };
   } catch (error) {
-    console.error('Failed to get monthly usage:', error);
     return { totalRelays: 0, totalCost: 0, endpoints: [] };
   }
 }
@@ -230,10 +403,8 @@ export function deletePermanentEndpoint(id: string): boolean {
     storage.endpoints[index].updatedAt = new Date().toISOString();
     
     saveStorage(storage);
-    console.log(`[BILLING] Deleted endpoint: ${id}`);
     return true;
   } catch (error) {
-    console.error('Failed to delete endpoint:', error);
     return false;
   }
 }

@@ -15,16 +15,12 @@ export async function POST(request: NextRequest) {
   try {
     // Debug: Log the incoming request
     const url = new URL(request.url);
-    console.log(`[DEBUG] RPC Route - Full URL: ${url.href}`);
-    console.log(`[DEBUG] RPC Route - Pathname: ${url.pathname}`);
     
     // Extract endpoint ID from the URL path
     const pathParts = url.pathname.split('/');
-    console.log(`[DEBUG] RPC Route - Path parts:`, pathParts);
     
     // The URL should be /api/rpc/endpointId, so endpointId is at index 3
     const endpointId = pathParts[3]; // /api/rpc/endpointId -> index 3
-    console.log(`[DEBUG] RPC Route - Extracted endpoint ID: ${endpointId}`);
 
     if (!endpointId || endpointId === 'rpc') {
       return NextResponse.json(
@@ -145,7 +141,6 @@ export async function POST(request: NextRequest) {
     });
 
     // Log usage for monitoring
-    console.log(`[pokt.ai] RPC: ${endpointId} -> ${requestBody.method} (${latency}ms)`);
 
     return new NextResponse(JSON.stringify(responseData), {
       status: response.ok ? 200 : response.status,
@@ -153,7 +148,6 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('RPC Proxy Error:', error);
     return NextResponse.json(
       { 
         jsonrpc: '2.0',

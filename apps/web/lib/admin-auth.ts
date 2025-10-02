@@ -1,7 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
 
 export interface AdminUser {
   id: string;
@@ -21,18 +18,23 @@ export async function getAdminUser(request: NextRequest): Promise<AdminUser | nu
   }
 
   try {
-    // In a real implementation, you'd verify the JWT token here
-    // For now, we'll simulate by checking if the token exists in the database
-    const adminUser = await prisma.adminUser.findFirst({
-      where: {
+    // In production, validate session token and fetch admin user from database
+    if (process.env.NODE_ENV === 'development') {
+      // Mock admin user for development only
+      const mockAdminUser: AdminUser = {
+        id: 'admin-1',
+        email: 'admin@pokt.ai',
+        name: 'Admin User',
+        role: 'owner',
         isActive: true,
-        // In production, you'd verify the token against a stored hash
-      },
-    });
-
-    return adminUser as AdminUser | null;
+      };
+      return mockAdminUser;
+    }
+    
+    // Production: Validate session and fetch from database
+    // TODO: Implement proper admin authentication
+    return null;
   } catch (error) {
-    console.error('Admin auth error:', error);
     return null;
   }
 }

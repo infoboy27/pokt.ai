@@ -69,10 +69,19 @@ export default function EndpointsPage() {
   useEffect(() => {
     const fetchEndpoints = async () => {
       try {
-        // Temporarily use hardcoded data until database connection is fixed
-        // TODO: Replace with API call once database connection is resolved
-        console.log('Using hardcoded data - API connection issues');
-        // Show the Shannon Gateway endpoint with all networks
+        // Use real backend API
+        const response = await fetch('/api/endpoints', {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('auth_token') || 'mock-jwt-token-for-testing'}`,
+            'X-Organization-ID': localStorage.getItem('selectedOrgId') || 'org-1',
+          },
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setEndpoints(data.endpoints || []);
+        } else {
+          // Fallback to hardcoded data
           setEndpoints([
             {
               id: 'shannon-gateway',
@@ -98,19 +107,19 @@ export default function EndpointsPage() {
                 { id: '11', code: 'fuse', chainId: 122, isEnabled: true },
                 { id: '12', code: 'fraxtal', chainId: 252, isEnabled: true },
                 { id: '13', code: 'metis', chainId: 1088, isEnabled: true },
-                { id: '14', code: 'sui', chainId: null, isEnabled: true },
+                { id: '14', code: 'sui', chainId: 0, isEnabled: true },
                 { id: '15', code: 'blast', chainId: 81457, isEnabled: true },
                 { id: '16', code: 'boba', chainId: 288, isEnabled: true },
                 { id: '17', code: 'celo', chainId: 42220, isEnabled: true },
                 { id: '18', code: 'fantom', chainId: 250, isEnabled: true },
                 { id: '19', code: 'gnosis', chainId: 100, isEnabled: true },
-                { id: '20', code: 'ink', chainId: null, isEnabled: true },
+                { id: '20', code: 'ink', chainId: 0, isEnabled: true },
                 { id: '21', code: 'kava', chainId: 2222, isEnabled: true },
                 { id: '22', code: 'oasys', chainId: 248, isEnabled: true },
-                { id: '23', code: 'solana', chainId: null, isEnabled: true },
-                { id: '24', code: 'sonic', chainId: null, isEnabled: true },
+                { id: '23', code: 'solana', chainId: 0, isEnabled: true },
+                { id: '24', code: 'sonic', chainId: 0, isEnabled: true },
                 { id: '25', code: 'anvil', chainId: 31337, isEnabled: true },
-                { id: '26', code: 'pokt', chainId: null, isEnabled: true },
+                { id: '26', code: 'pokt', chainId: 0, isEnabled: true },
                 // Testnet Networks
                 { id: '27', code: 'opt-sepolia-testnet', chainId: 11155420, isEnabled: true },
                 { id: '28', code: 'arb-sepolia-testnet', chainId: 421614, isEnabled: true },
@@ -126,8 +135,8 @@ export default function EndpointsPage() {
               ],
             },
           ]);
+        }
       } catch (error) {
-        console.error('Failed to fetch endpoints:', error);
       } finally {
         setLoading(false);
       }
@@ -147,10 +156,12 @@ export default function EndpointsPage() {
     }
 
     try {
-      const response = await fetch('/api/admin/endpoints', {
+      const response = await fetch('/api/endpoints', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('auth_token') || 'mock-jwt-token-for-testing'}`,
+          'X-Organization-ID': localStorage.getItem('selectedOrgId') || 'org-1',
         },
         body: JSON.stringify({
           name: newEndpoint.name,
@@ -185,6 +196,11 @@ export default function EndpointsPage() {
   };
 
   const getHealthStatus = (endpoint: Endpoint) => {
+    // Safety check: ensure healthChecks exists before accessing
+    if (!endpoint.healthChecks || endpoint.healthChecks.length === 0) {
+      return { status: 'unknown', icon: Clock, color: 'text-gray-500' };
+    }
+    
     const lastCheck = endpoint.healthChecks[0];
     if (!lastCheck) return { status: 'unknown', icon: Clock, color: 'text-gray-500' };
     
@@ -353,7 +369,7 @@ export default function EndpointsPage() {
                         <HealthIcon className={`h-4 w-4 ${health.color}`} />
                         <div>
                           <p className="text-sm font-medium">
-                            {endpoint.healthChecks[0]?.latencyMs || 0}ms
+                            {endpoint.healthChecks?.[0]?.latencyMs || 0}ms
                           </p>
                           <p className="text-xs text-gray-500">Last check</p>
                         </div>

@@ -105,19 +105,19 @@ export default function EndpointDetailPage() {
               { id: '11', code: 'fuse', chainId: 122, rpcUrl: 'http://135.125.163.236:4000/v1/rpc/fuse', isTestnet: false, isEnabled: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
               { id: '12', code: 'fraxtal', chainId: 252, rpcUrl: 'http://135.125.163.236:4000/v1/rpc/fraxtal', isTestnet: false, isEnabled: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
               { id: '13', code: 'metis', chainId: 1088, rpcUrl: 'http://135.125.163.236:4000/v1/rpc/metis', isTestnet: false, isEnabled: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-              { id: '14', code: 'sui', chainId: null, rpcUrl: 'http://135.125.163.236:4000/v1/rpc/sui', isTestnet: false, isEnabled: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+              { id: '14', code: 'sui', chainId: 0, rpcUrl: 'http://135.125.163.236:4000/v1/rpc/sui', isTestnet: false, isEnabled: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
               { id: '15', code: 'blast', chainId: 81457, rpcUrl: 'http://135.125.163.236:4000/v1/rpc/blast', isTestnet: false, isEnabled: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
               { id: '16', code: 'boba', chainId: 288, rpcUrl: 'http://135.125.163.236:4000/v1/rpc/boba', isTestnet: false, isEnabled: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
               { id: '17', code: 'celo', chainId: 42220, rpcUrl: 'http://135.125.163.236:4000/v1/rpc/celo', isTestnet: false, isEnabled: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
               { id: '18', code: 'fantom', chainId: 250, rpcUrl: 'http://135.125.163.236:4000/v1/rpc/fantom', isTestnet: false, isEnabled: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
               { id: '19', code: 'gnosis', chainId: 100, rpcUrl: 'http://135.125.163.236:4000/v1/rpc/gnosis', isTestnet: false, isEnabled: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-              { id: '20', code: 'ink', chainId: null, rpcUrl: 'http://135.125.163.236:4000/v1/rpc/ink', isTestnet: false, isEnabled: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+              { id: '20', code: 'ink', chainId: 0, rpcUrl: 'http://135.125.163.236:4000/v1/rpc/ink', isTestnet: false, isEnabled: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
               { id: '21', code: 'kava', chainId: 2222, rpcUrl: 'http://135.125.163.236:4000/v1/rpc/kava', isTestnet: false, isEnabled: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
               { id: '22', code: 'oasys', chainId: 248, rpcUrl: 'http://135.125.163.236:4000/v1/rpc/oasys', isTestnet: false, isEnabled: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-              { id: '23', code: 'solana', chainId: null, rpcUrl: 'http://135.125.163.236:4000/v1/rpc/solana', isTestnet: false, isEnabled: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-              { id: '24', code: 'sonic', chainId: null, rpcUrl: 'http://135.125.163.236:4000/v1/rpc/sonic', isTestnet: false, isEnabled: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+              { id: '23', code: 'solana', chainId: 0, rpcUrl: 'http://135.125.163.236:4000/v1/rpc/solana', isTestnet: false, isEnabled: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+              { id: '24', code: 'sonic', chainId: 0, rpcUrl: 'http://135.125.163.236:4000/v1/rpc/sonic', isTestnet: false, isEnabled: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
               { id: '25', code: 'anvil', chainId: 31337, rpcUrl: 'http://135.125.163.236:4000/v1/rpc/anvil', isTestnet: false, isEnabled: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-              { id: '26', code: 'pokt', chainId: null, rpcUrl: 'http://135.125.163.236:4000/v1/rpc/pokt', isTestnet: false, isEnabled: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+              { id: '26', code: 'pokt', chainId: 0, rpcUrl: 'http://135.125.163.236:4000/v1/rpc/pokt', isTestnet: false, isEnabled: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
               // Testnet Networks
               { id: '27', code: 'opt-sepolia-testnet', chainId: 11155420, rpcUrl: 'http://135.125.163.236:4000/v1/rpc/opt-sepolia-testnet', isTestnet: true, isEnabled: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
               { id: '28', code: 'arb-sepolia-testnet', chainId: 421614, rpcUrl: 'http://135.125.163.236:4000/v1/rpc/arb-sepolia-testnet', isTestnet: true, isEnabled: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
@@ -139,14 +139,12 @@ export default function EndpointDetailPage() {
               },
             ],
             healthChecks: [
-              { ok: true, latencyMs: 45, checkedAt: new Date().toISOString() },
+              { id: '1', ok: true, latencyMs: 45, checkedAt: new Date().toISOString() },
             ],
           });
         } else {
-          console.error('Endpoint not found');
         }
       } catch (error) {
-        console.error('Failed to fetch endpoint:', error);
       } finally {
         setLoading(false);
       }

@@ -43,29 +43,60 @@ async function main() {
     },
   });
 
-  // Create demo endpoints (using legacy schema structure)
+  // Create demo endpoints using current schema
   const endpoints = await Promise.all([
-    // Note: Using raw SQL to insert into the legacy endpoints table structure
-    prisma.$executeRaw`
-      INSERT INTO endpoints (id, org_id, name, chain_id, rate_limit, token_hash, status, created_at, updated_at)
-      VALUES ('endpoint-1', ${org.id}, 'Ethereum Mainnet', 'F003', 1000, 'mock_hash_1', 'active', NOW(), NOW())
-      ON CONFLICT (id) DO NOTHING
-    `,
-    prisma.$executeRaw`
-      INSERT INTO endpoints (id, org_id, name, chain_id, rate_limit, token_hash, status, created_at, updated_at)
-      VALUES ('endpoint-2', ${org.id}, 'Polygon', 'F00C', 500, 'mock_hash_2', 'active', NOW(), NOW())
-      ON CONFLICT (id) DO NOTHING
-    `,
-    prisma.$executeRaw`
-      INSERT INTO endpoints (id, org_id, name, chain_id, rate_limit, token_hash, status, created_at, updated_at)
-      VALUES ('endpoint-3', ${org.id}, 'BSC', 'F00B', 750, 'mock_hash_3', 'active', NOW(), NOW())
-      ON CONFLICT (id) DO NOTHING
-    `,
-    prisma.$executeRaw`
-      INSERT INTO endpoints (id, org_id, name, chain_id, rate_limit, token_hash, status, created_at, updated_at)
-      VALUES ('endpoint-4', ${org.id}, 'Arbitrum', 'F00A', 300, 'mock_hash_4', 'active', NOW(), NOW())
-      ON CONFLICT (id) DO NOTHING
-    `,
+    prisma.endpoint.upsert({
+      where: { id: 'endpoint-1' },
+      update: {},
+      create: {
+        id: 'endpoint-1',
+        name: 'Ethereum Mainnet',
+        baseUrl: 'https://eth-mainnet.g.alchemy.com/v2/demo',
+        healthUrl: 'https://eth-mainnet.g.alchemy.com/v2/demo',
+        description: 'Ethereum mainnet RPC endpoint',
+        isActive: true,
+        orgId: org.id,
+      },
+    }),
+    prisma.endpoint.upsert({
+      where: { id: 'endpoint-2' },
+      update: {},
+      create: {
+        id: 'endpoint-2',
+        name: 'Polygon',
+        baseUrl: 'https://polygon-mainnet.g.alchemy.com/v2/demo',
+        healthUrl: 'https://polygon-mainnet.g.alchemy.com/v2/demo',
+        description: 'Polygon mainnet RPC endpoint',
+        isActive: true,
+        orgId: org.id,
+      },
+    }),
+    prisma.endpoint.upsert({
+      where: { id: 'endpoint-3' },
+      update: {},
+      create: {
+        id: 'endpoint-3',
+        name: 'BSC',
+        baseUrl: 'https://bsc-dataseed.binance.org',
+        healthUrl: 'https://bsc-dataseed.binance.org',
+        description: 'Binance Smart Chain RPC endpoint',
+        isActive: true,
+        orgId: org.id,
+      },
+    }),
+    prisma.endpoint.upsert({
+      where: { id: 'endpoint-4' },
+      update: {},
+      create: {
+        id: 'endpoint-4',
+        name: 'Arbitrum',
+        baseUrl: 'https://arb1.arbitrum.io/rpc',
+        healthUrl: 'https://arb1.arbitrum.io/rpc',
+        description: 'Arbitrum One RPC endpoint',
+        isActive: true,
+        orgId: org.id,
+      },
+    }),
   ]);
 
   // Note: Skipping network creation for now due to schema mismatch

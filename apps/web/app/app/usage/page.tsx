@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -27,37 +27,110 @@ import {
   TrendingDown,
   Download,
   Calendar,
-  Filter
+  Filter,
+  Loader2,
+  AlertCircle
 } from 'lucide-react';
 
-// Mock data
-const usageData = [
-  { date: '2024-01-01', relays: 125000, latency: 45, errors: 0.2, endpoint: 'Ethereum' },
-  { date: '2024-01-02', relays: 142000, latency: 42, errors: 0.1, endpoint: 'Ethereum' },
-  { date: '2024-01-03', relays: 138000, latency: 48, errors: 0.3, endpoint: 'Ethereum' },
-  { date: '2024-01-04', relays: 156000, latency: 41, errors: 0.1, endpoint: 'Ethereum' },
-  { date: '2024-01-05', relays: 168000, latency: 39, errors: 0.2, endpoint: 'Ethereum' },
-  { date: '2024-01-06', relays: 175000, latency: 37, errors: 0.1, endpoint: 'Ethereum' },
-  { date: '2024-01-07', relays: 182000, latency: 35, errors: 0.1, endpoint: 'Ethereum' },
-];
-
-const endpointData = [
-  { name: 'Ethereum Mainnet', relays: 850000, percentage: 45 },
-  { name: 'Polygon', relays: 450000, percentage: 24 },
-  { name: 'BSC', relays: 320000, percentage: 17 },
-  { name: 'Arbitrum', relays: 200000, percentage: 11 },
-  { name: 'Others', relays: 80000, percentage: 3 },
-];
-
 const COLORS = ['#7851EC', '#57C3FF', '#192633', '#F5F6FA', '#E5E7EB'];
+
+interface UsageAnalytics {
+  totalRelays: number;
+  avgResponseTime: number;
+  errorRate: number;
+  activeEndpoints: number;
+  relayChangePercent: number;
+  latencyChangePercent: number;
+  errorChangePercent: number;
+  endpointChangeCount: number;
+  dailyData: Array<{
+    date: string;
+    relays: number;
+    latency: number;
+    errors: number;
+  }>;
+  endpointBreakdown: Array<{
+    name: string;
+    relays: number;
+    percentage: number;
+    avgLatency: number;
+    avgErrorRate: number;
+  }>;
+  errorTrends: Array<{
+    date: string;
+    errors: number;
+  }>;
+}
 
 export default function UsagePage() {
   const [timeRange, setTimeRange] = useState('7d');
   const [selectedEndpoint, setSelectedEndpoint] = useState('all');
+  const [analytics, setAnalytics] = useState<UsageAnalytics | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const totalRelays = usageData.reduce((sum, day) => sum + day.relays, 0);
-  const avgLatency = usageData.reduce((sum, day) => sum + day.latency, 0) / usageData.length;
-  const avgErrorRate = usageData.reduce((sum, day) => sum + day.errors, 0) / usageData.length;
+  const fetchAnalytics = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const days = timeRange === '1d' ? '1' : timeRange === '7d' ? '7' : timeRange === '30d' ? '30' : '90';
+      const endpointParam = selectedEndpoint === 'all' ? '' : selectedEndpoint;
+      
+      const url = new URL('/api/usage/analytics', window.location.origin);
+      url.searchParams.set('days', days);
+      if (endpointParam) {
+        url.searchParams.set('endpointId', endpointParam);
+      }
+
+      const response = await fetch(url.toString());
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch analytics: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setAnalytics(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load analytics');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAnalytics();
+  }, [timeRange, selectedEndpoint]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="flex items-center space-x-2">
+          <Loader2 className="h-6 w-6 animate-spin" />
+          <span>Loading usage analytics...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="flex items-center space-x-2 text-red-600">
+          <AlertCircle className="h-6 w-6" />
+          <span>Error: {error}</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!analytics) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <span>No analytics data available</span>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -79,9 +152,9 @@ export default function UsagePage() {
               <SelectItem value="90d">Last 90 days</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={() => fetchAnalytics()}>
             <Download className="w-4 h-4 mr-2" />
-            Export
+            Refresh
           </Button>
         </div>
       </div>
@@ -94,10 +167,14 @@ export default function UsagePage() {
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalRelays.toLocaleString()}</div>
+            <div className="text-2xl font-bold">{analytics.totalRelays.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground flex items-center">
-              <TrendingUp className="w-3 h-3 mr-1 text-green-600" />
-              +12% from last period
+              {analytics.relayChangePercent >= 0 ? (
+                <TrendingUp className="w-3 h-3 mr-1 text-green-600" />
+              ) : (
+                <TrendingDown className="w-3 h-3 mr-1 text-red-600" />
+              )}
+              {analytics.relayChangePercent >= 0 ? '+' : ''}{analytics.relayChangePercent.toFixed(1)}% from last period
             </p>
           </CardContent>
         </Card>
@@ -108,10 +185,14 @@ export default function UsagePage() {
             <TrendingDown className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{Math.round(avgLatency)}ms</div>
+            <div className="text-2xl font-bold">{analytics.avgResponseTime}ms</div>
             <p className="text-xs text-muted-foreground flex items-center">
-              <TrendingDown className="w-3 h-3 mr-1 text-green-600" />
-              -8% from last period
+              {analytics.latencyChangePercent <= 0 ? (
+                <TrendingDown className="w-3 h-3 mr-1 text-green-600" />
+              ) : (
+                <TrendingUp className="w-3 h-3 mr-1 text-red-600" />
+              )}
+              {analytics.latencyChangePercent >= 0 ? '+' : ''}{analytics.latencyChangePercent.toFixed(1)}% from last period
             </p>
           </CardContent>
         </Card>
@@ -122,10 +203,14 @@ export default function UsagePage() {
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{(avgErrorRate * 100).toFixed(2)}%</div>
+            <div className="text-2xl font-bold">{analytics.errorRate.toFixed(2)}%</div>
             <p className="text-xs text-muted-foreground flex items-center">
-              <TrendingDown className="w-3 h-3 mr-1 text-green-600" />
-              -0.05% from last period
+              {analytics.errorChangePercent <= 0 ? (
+                <TrendingDown className="w-3 h-3 mr-1 text-green-600" />
+              ) : (
+                <TrendingUp className="w-3 h-3 mr-1 text-red-600" />
+              )}
+              {analytics.errorChangePercent >= 0 ? '+' : ''}{analytics.errorChangePercent.toFixed(2)}% from last period
             </p>
           </CardContent>
         </Card>
@@ -136,10 +221,10 @@ export default function UsagePage() {
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">4</div>
+            <div className="text-2xl font-bold">{analytics.activeEndpoints}</div>
             <p className="text-xs text-muted-foreground flex items-center">
               <TrendingUp className="w-3 h-3 mr-1 text-green-600" />
-              +1 this month
+              +{analytics.endpointChangeCount} this month
             </p>
           </CardContent>
         </Card>
@@ -155,7 +240,7 @@ export default function UsagePage() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={usageData}>
+              <AreaChart data={analytics.dailyData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis 
                   dataKey="date" 
@@ -186,7 +271,7 @@ export default function UsagePage() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={usageData}>
+              <LineChart data={analytics.dailyData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis 
                   dataKey="date" 
@@ -211,56 +296,58 @@ export default function UsagePage() {
       </div>
 
       {/* Endpoint Distribution */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Usage by Endpoint</CardTitle>
-          <CardDescription>Relay distribution across your endpoints</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-6 md:grid-cols-2">
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={endpointData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percentage }) => `${name}: ${percentage}%`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="relays"
-                >
-                  {endpointData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+      {analytics.endpointBreakdown.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Usage by Endpoint</CardTitle>
+            <CardDescription>Relay distribution across your endpoints</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-6 md:grid-cols-2">
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={analytics.endpointBreakdown}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percentage }) => `${name}: ${percentage}%`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="relays"
+                  >
+                    {analytics.endpointBreakdown.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value) => [`${Number(value).toLocaleString()} relays`, 'Relays']} />
+                </PieChart>
+              </ResponsiveContainer>
+              
+              <div className="space-y-4">
+                <h3 className="font-semibold">Endpoint Breakdown</h3>
+                <div className="space-y-3">
+                  {analytics.endpointBreakdown.map((endpoint, index) => (
+                    <div key={endpoint.name} className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <div 
+                          className="w-3 h-3 rounded-full" 
+                          style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                        />
+                        <span className="text-sm font-medium">{endpoint.name}</span>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-sm font-semibold">{endpoint.relays.toLocaleString()}</div>
+                        <div className="text-xs text-muted-foreground">{endpoint.percentage}%</div>
+                      </div>
+                    </div>
                   ))}
-                </Pie>
-                <Tooltip formatter={(value) => [`${Number(value).toLocaleString()} relays`, 'Relays']} />
-              </PieChart>
-            </ResponsiveContainer>
-            
-            <div className="space-y-4">
-              <h3 className="font-semibold">Endpoint Breakdown</h3>
-              <div className="space-y-3">
-                {endpointData.map((endpoint, index) => (
-                  <div key={endpoint.name} className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <div 
-                        className="w-3 h-3 rounded-full" 
-                        style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                      />
-                      <span className="text-sm font-medium">{endpoint.name}</span>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-sm font-semibold">{endpoint.relays.toLocaleString()}</div>
-                      <div className="text-xs text-muted-foreground">{endpoint.percentage}%</div>
-                    </div>
-                  </div>
-                ))}
+                </div>
               </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Error Rate Chart */}
       <Card>
@@ -270,7 +357,7 @@ export default function UsagePage() {
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={usageData}>
+            <BarChart data={analytics.errorTrends}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis 
                 dataKey="date" 
@@ -279,7 +366,7 @@ export default function UsagePage() {
               <YAxis />
               <Tooltip 
                 labelFormatter={(value) => new Date(value).toLocaleDateString()}
-                formatter={(value) => [`${(Number(value) * 100).toFixed(2)}%`, 'Error Rate']}
+                formatter={(value) => [`${Number(value).toFixed(2)}%`, 'Error Rate']}
               />
               <Bar 
                 dataKey="errors" 

@@ -17,7 +17,7 @@ import {
   ApiBody 
 } from '@nestjs/swagger';
 import { EndpointsService } from './endpoints.service';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { MockAuthGuard } from '../auth/mock-auth.guard';
 
 class CreateEndpointDto {
   name: string;
@@ -27,7 +27,7 @@ class CreateEndpointDto {
 
 @ApiTags('endpoints')
 @Controller('endpoints')
-@UseGuards(JwtAuthGuard)
+@UseGuards(MockAuthGuard)
 @ApiBearerAuth()
 export class EndpointsController {
   constructor(private endpointsService: EndpointsService) {}
@@ -37,13 +37,15 @@ export class EndpointsController {
   @ApiResponse({ status: 201, description: 'Endpoint created successfully' })
   @ApiResponse({ status: 400, description: 'Bad request' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async createEndpoint(@Body() createEndpointDto: CreateEndpointDto, @Request() req) {
-    // In a real implementation, you would get the orgId from the user's context
-    const orgId = 'org-1'; // Mock org ID
+  async createEndpoint(@Body() body: any, @Request() req) {
+    // Get the orgId from the authenticated user's context or header
+    const orgId = req.headers['x-organization-id'] || req.user?.orgId || 'org-1';
     
     return this.endpointsService.createEndpoint({
       orgId,
-      ...createEndpointDto,
+      name: body.name,
+      chainId: body.chainId,
+      rateLimit: body.rateLimit,
     });
   }
 
@@ -52,8 +54,9 @@ export class EndpointsController {
   @ApiResponse({ status: 200, description: 'Endpoints retrieved successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getEndpoints(@Request() req) {
-    // In a real implementation, you would get the orgId from the user's context
-    const orgId = 'org-1'; // Mock org ID
+    // Get the orgId from the authenticated user's context or header
+    const orgId = req.headers['x-organization-id'] || req.user?.orgId || 'org-1';
+    console.log('Endpoints controller called with orgId:', orgId);
     
     return this.endpointsService.getEndpoints(orgId);
   }
@@ -64,8 +67,8 @@ export class EndpointsController {
   @ApiResponse({ status: 404, description: 'Endpoint not found' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getEndpoint(@Param('id') id: string, @Request() req) {
-    // In a real implementation, you would get the orgId from the user's context
-    const orgId = 'org-1'; // Mock org ID
+    // Get the orgId from the authenticated user's context or header
+    const orgId = req.headers['x-organization-id'] || req.user?.orgId || 'org-1';
     
     return this.endpointsService.getEndpoint(id, orgId);
   }
@@ -76,8 +79,8 @@ export class EndpointsController {
   @ApiResponse({ status: 404, description: 'Endpoint not found' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async rotateToken(@Param('id') id: string, @Request() req) {
-    // In a real implementation, you would get the orgId from the user's context
-    const orgId = 'org-1'; // Mock org ID
+    // Get the orgId from the authenticated user's context or header
+    const orgId = req.headers['x-organization-id'] || req.user?.orgId || 'org-1';
     
     return this.endpointsService.rotateToken(id, orgId);
   }
@@ -88,8 +91,8 @@ export class EndpointsController {
   @ApiResponse({ status: 404, description: 'Endpoint not found' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async revokeEndpoint(@Param('id') id: string, @Request() req) {
-    // In a real implementation, you would get the orgId from the user's context
-    const orgId = 'org-1'; // Mock org ID
+    // Get the orgId from the authenticated user's context or header
+    const orgId = req.headers['x-organization-id'] || req.user?.orgId || 'org-1';
     
     return this.endpointsService.revokeEndpoint(id, orgId);
   }
@@ -100,8 +103,8 @@ export class EndpointsController {
   @ApiResponse({ status: 404, description: 'Endpoint not found' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async deleteEndpoint(@Param('id') id: string, @Request() req) {
-    // In a real implementation, you would get the orgId from the user's context
-    const orgId = 'org-1'; // Mock org ID
+    // Get the orgId from the authenticated user's context or header
+    const orgId = req.headers['x-organization-id'] || req.user?.orgId || 'org-1';
     
     return this.endpointsService.deleteEndpoint(id, orgId);
   }

@@ -8,5 +8,10 @@ export async function GET(request: Request) {
   // Redirect to the homepage through the proxy
   const redirectUrl = `${protocol}://${host}/`;
   
-  return NextResponse.redirect(redirectUrl);
+  const response = NextResponse.redirect(redirectUrl);
+  
+  // Clear the user session cookie
+  response.cookies.delete('user_id');
+  
+  return response;
 }

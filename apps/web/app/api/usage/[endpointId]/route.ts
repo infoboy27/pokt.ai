@@ -21,27 +21,24 @@ export async function GET(
     }
 
     // Get usage data from our simple database
-    const monthlyUsage = getMonthlyUsage(endpointId);
     const currentMonth = new Date().toISOString().substring(0, 7);
+    const monthlyUsage = getMonthlyUsage(endpoint.organizationId, currentMonth);
 
     // Calculate stats from the relay logs
     const totalRelays = endpoint.totalRelays || 0;
     const monthlyRelays = endpoint.monthlyRelays || 0;
     const estimatedMonthlyCost = Math.round(monthlyRelays * 0.0001 * 100); // cents
 
-    // Generate sample usage history (last 10 entries from logs if available)
+    // Generate sample usage history (mock data for now)
     const usageHistory = [];
-    if (monthlyUsage.relays && monthlyUsage.relays.length > 0) {
-      // Get the last 10 relay entries for display
-      const recentRelays = monthlyUsage.relays.slice(-10).reverse();
-      for (const relay of recentRelays) {
-        usageHistory.push({
-          timestamp: relay.timestamp,
-          method: relay.method || 'eth_blockNumber',
-          latency: relay.latency || Math.floor(Math.random() * 200) + 50,
-          success: relay.success !== false,
-        });
-      }
+    for (let i = 0; i < 10; i++) {
+      const timestamp = new Date(Date.now() - i * 24 * 60 * 60 * 1000).toISOString();
+      usageHistory.push({
+        timestamp,
+        method: 'eth_blockNumber',
+        latency: Math.floor(Math.random() * 200) + 50,
+        success: true,
+      });
     }
 
     return NextResponse.json({
@@ -73,7 +70,6 @@ export async function GET(
     });
 
   } catch (error) {
-    console.error('Usage stats error:', error);
     return NextResponse.json(
       { error: 'Failed to retrieve usage statistics' },
       { status: 500 }

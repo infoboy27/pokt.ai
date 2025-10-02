@@ -1,17 +1,55 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getPermanentEndpoint, logRelay } from '@/lib/simple-database';
+import { endpointQueries, usageQueries } from '@/lib/database';
+import { gatewayRateLimit, withRateLimit } from '@/lib/rate-limit';
 
-// Map chain IDs to actual RPC URLs
+// Map chain IDs to your RPC provider server endpoints
 const chainRpcMapping: Record<string, string> = {
-  'F003': 'https://ethereum-rpc.publicnode.com',     // Ethereum Mainnet
-  'F00C': 'https://polygon-rpc.com',                 // Polygon
-  'F00B': 'https://bsc-dataseed.binance.org',        // BSC
-  'F00A': 'https://arb1.arbitrum.io/rpc',           // Arbitrum
-  'F00E': 'https://mainnet.optimism.io',             // Optimism
+  // Ethereum
+  '1': 'http://135.125.163.236:4000/v1/rpc/eth',
+  'eth': 'http://135.125.163.236:4000/v1/rpc/eth',
+  'F003': 'http://135.125.163.236:4000/v1/rpc/eth',
+  
+  // Polygon
+  '137': 'http://135.125.163.236:4000/v1/rpc/poly',
+  'poly': 'http://135.125.163.236:4000/v1/rpc/poly',
+  'F00C': 'http://135.125.163.236:4000/v1/rpc/poly',
+  
+  // BSC
+  '56': 'http://135.125.163.236:4000/v1/rpc/bsc',
+  'bsc': 'http://135.125.163.236:4000/v1/rpc/bsc',
+  'F00B': 'http://135.125.163.236:4000/v1/rpc/bsc',
+  
+  // Arbitrum
+  '42161': 'http://135.125.163.236:4000/v1/rpc/arb-one',
+  'arb-one': 'http://135.125.163.236:4000/v1/rpc/arb-one',
+  'F00A': 'http://135.125.163.236:4000/v1/rpc/arb-one',
+  
+  // Optimism
+  '10': 'http://135.125.163.236:4000/v1/rpc/opt',
+  'opt': 'http://135.125.163.236:4000/v1/rpc/opt',
+  'F00E': 'http://135.125.163.236:4000/v1/rpc/opt',
+  
+  // Base
+  '8453': 'http://135.125.163.236:4000/v1/rpc/base',
+  'base': 'http://135.125.163.236:4000/v1/rpc/base',
+  
+  // Avalanche
+  '43114': 'http://135.125.163.236:4000/v1/rpc/avax',
+  'avax': 'http://135.125.163.236:4000/v1/rpc/avax',
+  'AVAX': 'http://135.125.163.236:4000/v1/rpc/avax',
+  
+  // Solana
+  'solana': 'http://135.125.163.236:4000/v1/rpc/solana',
 };
 
 // POST /api/gateway?endpoint=<endpointId> - RPC Gateway with Permanent Storage & Billing
 export async function POST(request: NextRequest) {
+  // Apply rate limiting
+  const rateLimitResponse = await withRateLimit(request, gatewayRateLimit);
+  if (rateLimitResponse) {
+    return rateLimitResponse;
+  }
+
   const startTime = Date.now();
   let endpointId: string | null = null;
   let endpoint: any = null;
@@ -39,8 +77,8 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Look up the endpoint in permanent storage
-    endpoint = getPermanentEndpoint(endpointId);
+    // Look up the endpoint in PostgreSQL database
+    endpoint = await endpointQueries.findById(endpointId);
 
     if (!endpoint) {
       return NextResponse.json(
@@ -56,7 +94,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (endpoint.status !== 'active') {
+    if (!endpoint.is_active) {
       return NextResponse.json(
         { 
           jsonrpc: '2.0',
@@ -70,15 +108,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get the RPC URL for this chain
-    const rpcUrl = chainRpcMapping[endpoint.chainId];
+    // Get the RPC URL for this chain (default to Ethereum if chain_id is null)
+    const chainId = endpoint.chain_id || 'eth';
+    const rpcUrl = chainRpcMapping[chainId];
     if (!rpcUrl) {
       return NextResponse.json(
         { 
           jsonrpc: '2.0',
           error: { 
             code: -32003, 
-            message: `Chain '${endpoint.chainId}' not supported` 
+            message: `Chain '${chainId}' not supported` 
           },
           id: null 
         },
@@ -104,18 +143,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Forward the request to the actual RPC endpoint
-    const response = await fetch(rpcUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+    // Forward the request to your RPC provider server with static API key
+        const response = await fetch(rpcUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-API-Key': process.env.STATIC_API_KEY || 'sk_pokt_ai_static_key', // Use static API key for all requests
+          },
       body: JSON.stringify(requestBody),
       signal: AbortSignal.timeout(30000),
     });
 
     const responseText = await response.text();
     const latency = Date.now() - startTime;
+
 
     // Try to parse as JSON
     let responseData;
@@ -134,7 +175,27 @@ export async function POST(request: NextRequest) {
 
     // Track relay for billing (async, don't wait)
     const isSuccess = response.ok && !responseData.error;
-    logRelay(endpointId, requestBody.method, latency, isSuccess);
+    
+    // Log to console (existing)
+    usageQueries.logUsage({
+      apiKeyId: endpointId, // Use endpoint ID, not API key
+      relayCount: 1,
+      responseTime: latency,
+      method: requestBody?.method || 'unknown',
+      networkId: 'eth' // Default to ethereum
+    });
+
+    // Also log to real usage tracking system
+    fetch('http://localhost:4000/api/usage/real', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        endpointId: endpointId,
+        apiKey: endpoint.token,
+        method: requestBody?.method || 'unknown',
+        latency: latency
+      })
+    });
 
     // Add metadata headers with billing info
     const headers = new Headers({
@@ -142,16 +203,15 @@ export async function POST(request: NextRequest) {
       'X-RPC-Latency': latency.toString(),
       'X-Powered-By': 'pokt.ai',
       'X-Endpoint-ID': endpointId,
-      'X-Chain-ID': endpoint.chainId,
+      'X-Chain-ID': endpoint.chain_id,
       'X-Network': endpoint.name,
       'X-Relay-Tracked': 'true',
-      'X-Total-Relays': endpoint.totalRelays.toString(),
-      'X-Monthly-Relays': endpoint.monthlyRelays.toString(),
+      'X-Total-Relays': '0', // TODO: Get from usage table
+      'X-Monthly-Relays': '0', // TODO: Get from usage table
       'X-Billing-Enabled': 'true',
     });
 
     // Log for monitoring
-    console.log(`[pokt.ai] RELAY TRACKED: ${endpointId} -> ${requestBody.method} (${latency}ms) [${isSuccess ? 'SUCCESS' : 'ERROR'}] [Total: ${endpoint.totalRelays + 1}]`);
 
     return new NextResponse(JSON.stringify(responseData), {
       status: response.ok ? 200 : response.status,
@@ -160,11 +220,14 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     const latency = Date.now() - startTime;
-    console.error('Gateway Error:', error);
     
     // Log failed request for billing
     if (endpointId) {
-      logRelay(endpointId, 'unknown', latency, false);
+      usageQueries.logUsage({
+        apiKeyId: endpointId,
+        relayCount: 1,
+        responseTime: 0
+      });
     }
     
     return NextResponse.json(

@@ -43,7 +43,6 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('RPC Proxy Error:', error);
     return NextResponse.json(
       { 
         error: 'RPC request failed', 
@@ -62,6 +61,12 @@ export async function GET() {
     description: 'BSC RPC endpoint proxied through pokt.ai',
   });
 }
+
+
+
+
+
+
 
 
 

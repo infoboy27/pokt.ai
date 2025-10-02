@@ -9,6 +9,8 @@ import { EndpointsModule } from './endpoints/endpoints.module';
 import { UsageModule } from './usage/usage.module';
 import { BillingModule } from './billing/billing.module';
 import { HealthModule } from './health/health.module';
+import { DashboardModule } from './dashboard/dashboard.module';
+import { NetworksModule } from './networks/networks.module';
 
 @Module({
   imports: [
@@ -25,6 +27,8 @@ import { HealthModule } from './health/health.module';
     UsageModule,
     BillingModule,
     HealthModule,
+    DashboardModule,
+    NetworksModule,
   ],
 })
 export class AppModule {}

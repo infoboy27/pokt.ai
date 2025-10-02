@@ -1,0 +1,156 @@
+http:
+  routers:
+    poktai-auth-api:
+      rule: "Host(`pokt.ai`) && PathPrefix(`/api/auth`)"
+      service: poktai-web
+      entryPoints:
+        - websecure
+      tls: {}
+      priority: 450
+
+    poktai-gateway:
+      rule: "Host(`pokt.ai`) && PathPrefix(`/api/gateway`)"
+      service: poktai-web
+      entryPoints:
+        - websecure
+      tls: {}
+      priority: 250
+
+    poktai-rpc-proxy:
+      rule: "Host(`pokt.ai`) && PathPrefix(`/api/rpc/`)"
+      service: poktai-web
+      entryPoints:
+        - websecure
+      tls: {}
+      priority: 200
+
+    poktai-billing-api:
+      rule: "Host(`pokt.ai`) && PathPrefix(`/api/billing`)"
+      service: poktai-web
+      entryPoints:
+        - websecure
+      tls: {}
+      priority: 160
+
+    poktai-usage-api:
+      rule: "Host(`pokt.ai`) && PathPrefix(`/api/usage`)"
+      service: poktai-web
+      entryPoints:
+        - websecure
+      tls: {}
+      priority: 165
+
+    poktai-endpoints-detail:
+      rule: "Host(`pokt.ai`) && PathRegexp(`^/api/endpoints/.+$`)"
+      service: poktai-web
+      entryPoints:
+        - websecure
+      tls: {}
+      priority: 300
+
+    poktai-endpoints-api:
+      rule: "Host(`pokt.ai`) && Path(`/api/endpoints`)"
+      service: poktai-web
+      entryPoints:
+        - websecure
+      tls: {}
+      priority: 150
+
+    poktai-auth-me:
+      rule: "Host(`pokt.ai`) && Path(`/api/auth/me`)"
+      service: poktai-web
+      entryPoints:
+        - websecure
+      tls: {}
+      priority: 500
+
+    poktai-customers-api:
+      rule: "Host(`pokt.ai`) && PathPrefix(`/api/customers`)"
+      service: poktai-web
+      entryPoints:
+        - websecure
+      tls: {}
+      priority: 190
+
+    poktai-organizations-api:
+      rule: "Host(`pokt.ai`) && PathPrefix(`/api/organizations`)"
+      service: poktai-api
+      entryPoints:
+        - websecure
+      tls: {}
+      priority: 180
+
+    poktai-networks-api: # New router for /api/networks
+      rule: "Host(`pokt.ai`) && PathPrefix(`/api/networks`)"
+      service: poktai-web
+      entryPoints:
+        - websecure
+      tls: {}
+      priority: 170
+
+    poktai-health-api: # New router for /api/health
+      rule: "Host(`pokt.ai`) && PathPrefix(`/api/health`)"
+      service: poktai-api
+      entryPoints:
+        - websecure
+      tls: {}
+      priority: 160
+
+    poktai-dashboard-api:
+      rule: "Host(`pokt.ai`) && PathPrefix(`/api/dashboard`)"
+      service: poktai-web
+      entryPoints:
+        - websecure
+      tls: {}
+      priority: 170
+
+    poktai-production-api:
+      rule: "Host(`pokt.ai`) && PathPrefix(`/api/production`)"
+      service: poktai-web
+      entryPoints:
+        - websecure
+      tls: {}
+      priority: 95
+
+    poktai-admin-api:
+      rule: "Host(`pokt.ai`) && PathPrefix(`/api/admin`)"
+      service: poktai-web
+      entryPoints:
+        - websecure
+      tls: {}
+      priority: 90
+
+    poktai-api:
+      rule: "Host(`pokt.ai`) && PathPrefix(`/api`)"
+      service: poktai-api
+      entryPoints:
+        - websecure
+      tls: {}
+      middlewares:
+        - poktai-api-strip
+      priority: 10
+
+    poktai-web:
+      rule: "Host(`pokt.ai`)"
+      service: poktai-web
+      entryPoints:
+        - websecure
+      tls: {}
+      priority: 1
+
+  middlewares:
+    poktai-api-strip:
+      stripPrefix:
+        prefixes:
+          - "/api"
+
+  services:
+    poktai-web:
+      loadBalancer:
+        servers:
+          - url: "http://infra_web_1_new:4000"
+
+    poktai-api:
+      loadBalancer:
+        servers:
+          - url: "http://infra_api_1:3001"

@@ -1,5 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { generateMonthlyBill, getMonthlyUsage } from '@/lib/billing-storage';
+
+// Mock billing functions for demo purposes
+async function getMonthlyUsage(orgId: string, month: string) {
+  // Mock usage data
+  return {
+    totalRelays: Math.floor(Math.random() * 10000) + 1000,
+    totalCost: Math.floor(Math.random() * 1000) + 100,
+  };
+}
+
+async function generateMonthlyBill(orgId: string, month: string) {
+  // Mock bill generation
+  const usage = await getMonthlyUsage(orgId, month);
+  return {
+    month,
+    totalRelays: usage.totalRelays,
+    totalCost: usage.totalCost,
+    status: 'pending',
+    createdAt: new Date().toISOString(),
+  };
+}
 
 // GET /api/billing/monthly?month=YYYY-MM&orgId=org-1 - Get monthly usage and billing
 export async function GET(request: NextRequest) {
@@ -44,7 +64,6 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Monthly billing error:', error);
     return NextResponse.json(
       { error: 'Failed to generate monthly billing' },
       { status: 500 }
@@ -89,12 +108,17 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Generate bill error:', error);
     return NextResponse.json(
       { error: 'Failed to generate bill' },
       { status: 500 }
     );
   }
 }
+
+
+
+
+
+
 
 

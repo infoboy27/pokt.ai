@@ -1,0 +1,90 @@
+# =============================================================================
+# PRODUCTION DOCKERFILE FOR POKT.AI API
+# =============================================================================
+
+# Multi-stage build for production optimization
+FROM node:18-alpine AS base
+
+# Install dependencies only when needed
+FROM base AS deps
+RUN apk add --no-cache libc6-compat
+WORKDIR /app
+
+# Install pnpm
+RUN npm install -g pnpm
+
+# Copy package files
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/api/package.json ./apps/api/
+COPY packages/*/package.json ./packages/*/
+
+# Install dependencies
+RUN pnpm install --frozen-lockfile --prod
+
+# =============================================================================
+# BUILD STAGE
+# =============================================================================
+FROM base AS builder
+WORKDIR /app
+
+# Install pnpm
+RUN npm install -g pnpm
+
+# Copy package files
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/api/package.json ./apps/api/
+COPY packages/*/package.json ./packages/*/
+
+# Install all dependencies (including dev)
+RUN pnpm install --frozen-lockfile
+
+# Copy source code
+COPY . .
+
+# Build the application
+WORKDIR /app/apps/api
+RUN pnpm run build
+
+# =============================================================================
+# PRODUCTION STAGE
+# =============================================================================
+FROM base AS production
+
+# Create app user for security
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nestjs
+
+# Install curl for health checks
+RUN apk add --no-cache curl
+
+WORKDIR /app
+
+# Copy production dependencies
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/apps/api/node_modules ./apps/api/node_modules
+
+# Copy built application
+COPY --from=builder --chown=nestjs:nodejs /app/apps/api/dist ./dist
+COPY --from=builder --chown=nestjs:nodejs /app/apps/api/package.json ./package.json
+COPY --from=builder --chown=nestjs:nodejs /app/apps/api/prisma ./prisma
+
+# Switch to non-root user
+USER nestjs
+
+# Expose port
+EXPOSE 3001
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD curl -f http://localhost:3001/api/health || exit 1
+
+# Start the application
+CMD ["node", "dist/main.js"]
+
+
+
+
+
+
+
+

@@ -37,9 +37,8 @@ export default function HealthPage() {
 
   const fetchHealthData = async () => {
     try {
-      // Use the proxy API route to avoid CORS issues
-      const apiUrl = '/api/health-proxy';
-      console.log('Fetching health data from:', apiUrl);
+      // Use the backend health API
+      const apiUrl = '/api/health/endpoints';
       
       const response = await fetch(apiUrl);
       
@@ -48,10 +47,8 @@ export default function HealthPage() {
       }
       
       const data = await response.json();
-      console.log('Health data received:', data);
       setHealthData(data.data);
     } catch (error) {
-      console.error('Failed to fetch health data:', error);
       // Set empty data to show the UI without crashing
       setHealthData({
         healthChecks: [],
@@ -68,7 +65,6 @@ export default function HealthPage() {
     // Set a timeout to prevent infinite loading
     const timeout = setTimeout(() => {
       if (loading) {
-        console.log('Loading timeout reached, showing empty state');
         setLoading(false);
         setHealthData({
           healthChecks: [],
