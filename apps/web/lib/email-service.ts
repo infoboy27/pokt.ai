@@ -29,7 +29,7 @@ class EmailService {
       secure: false, // Use TLS
       auth: {
         user: 'apikey',
-        pass: process.env.SENDGRID_API_KEY || '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'
+        pass: process.env.SENDGRID_API_KEY || ''
       }
     };
 
