@@ -4,7 +4,7 @@ import { UserProvider } from '@auth0/nextjs-auth0/client';
 import { Providers } from '@/components/providers';
 import './globals.css';
 
-const inter = Inter({ subsets: ['latin'] });
+const inter = Inter({ subsets: ['latin'], display: 'swap' });
 
 export const metadata: Metadata = {
   title: 'pokt.ai - AI-powered RPC Gateway',
