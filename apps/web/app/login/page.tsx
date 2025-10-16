@@ -197,13 +197,6 @@ export default function LoginPage() {
                 </Link>
               </p>
             </div>
-
-            {/* Demo Credentials */}
-            <div className="mt-6 p-4 bg-gray-50 rounded-md">
-              <p className="text-xs text-gray-500 mb-2">Demo Credentials:</p>
-              <p className="text-xs text-gray-600">Email: demo@pokt.ai</p>
-              <p className="text-xs text-gray-600">Password: demo123</p>
-            </div>
           </CardContent>
         </Card>
       </div>

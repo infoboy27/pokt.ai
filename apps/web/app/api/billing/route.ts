@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { endpointQueries, usageQueries } from '@/lib/database';
+import { emailService } from '@/lib/email-service';
 
 // GET /api/billing - Get billing information
 export async function GET(request: NextRequest) {
@@ -33,10 +34,9 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Determine plan based on usage
-    const basePlanCost = 400; // Base Enterprise plan
-    const overageCost = Math.max(0, totalCost - basePlanCost);
-    const totalMonthlyCost = Math.max(basePlanCost, totalCost);
+    // Pay-as-you-go pricing model
+    const totalMonthlyCost = totalCost; // No base plan cost, just pay for usage
+    const overageCost = 0; // No overage in pay-as-you-go model
 
     // Generate real usage history from database
     const usageHistory = [];
@@ -55,10 +55,10 @@ export async function GET(request: NextRequest) {
         monthRequests = currentMonthRequests;
         monthCost = totalMonthlyCost;
       } else {
-        // For previous months, generate realistic data based on current usage
-        const variation = 0.7 + Math.random() * 0.6; // ±30% variation
-        monthRequests = Math.floor(currentMonthRequests * variation);
-        monthCost = Math.max(basePlanCost, monthRequests * 0.0001);
+      // For previous months, generate realistic data based on current usage
+      const variation = 0.7 + Math.random() * 0.6; // ±30% variation
+      monthRequests = Math.floor(currentMonthRequests * variation);
+      monthCost = monthRequests * 0.0001; // Pay-as-you-go: no base cost
       }
       
       usageHistory.push({
@@ -105,28 +105,30 @@ export async function GET(request: NextRequest) {
 
     const billingData = {
       currentPlan: {
-        name: 'Enterprise',
+        name: 'Pay-as-you-go',
         price: totalMonthlyCost,
         features: [
-          'Unlimited RPC requests',
+          'Pay only for what you use',
+          'No monthly commitments',
+          'No setup fees',
           '99.9% SLA guarantee',
           'Priority support',
           'Advanced analytics',
-          'Custom endpoints',
+          'Unlimited endpoints',
           'Webhook notifications'
         ],
         usage: {
           requests: currentMonthRequests,
-          limit: 1000000,
-          percentage: Math.min(100, (currentMonthRequests / 1000000) * 100)
+          limit: 0, // No limits in pay-as-you-go
+          percentage: 0 // No percentage calculation needed
         }
       },
       paymentMethods,
       invoices,
       usageHistory,
       costBreakdown: {
-        basePlan: basePlanCost,
-        overage: overageCost,
+        basePlan: 0, // No base plan cost in pay-as-you-go
+        overage: 0, // No overage in pay-as-you-go
         total: totalMonthlyCost
       },
       nextBillingDate: new Date(currentDateObj.getFullYear(), currentDateObj.getMonth() + 1, 1).toISOString().split('T')[0],

@@ -80,11 +80,22 @@ export default function VerifyEmailPage() {
     setError('');
 
     try {
-      // In a real implementation, you would call an API to resend the code
-      // For now, we'll just show a message
-      alert('Verification code resent to your email');
+      const response = await fetch('/api/auth/resend-verification', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to resend code');
+      }
+
+      alert('Verification code resent to your email. Check the console logs or your inbox!');
     } catch (err: any) {
-      setError('Failed to resend code. Please try again.');
+      setError(err.message || 'Failed to resend code. Please try again.');
     } finally {
       setResending(false);
     }

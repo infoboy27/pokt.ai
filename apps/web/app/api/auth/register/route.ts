@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { userQueries, organizationQueries } from '@/lib/database';
-import bcrypt from 'bcryptjs';
 
 // OPTIONS /api/auth/register - Handle CORS preflight
 export async function OPTIONS(request: NextRequest) {
@@ -14,10 +12,11 @@ export async function OPTIONS(request: NextRequest) {
   });
 }
 
-// POST /api/auth/register - Handle user registration
+// POST /api/auth/register - Proxy to backend API
 export async function POST(request: NextRequest) {
   try {
-    const { name, email, password, company, plan } = await request.json();
+    const body = await request.json();
+    const { name, email, password, company, plan } = body;
 
     // Validate required fields
     if (!name || !email || !password) {
@@ -34,84 +33,42 @@ export async function POST(request: NextRequest) {
       return errorResponse;
     }
 
-    // Validate password strength
-    if (password.length < 8) {
-      const errorResponse = NextResponse.json(
-        { success: false, message: 'Password must be at least 8 characters long' },
-        { status: 400 }
-      );
-      
-      // Add CORS headers
-      errorResponse.headers.set('Access-Control-Allow-Origin', '*');
-      errorResponse.headers.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
-      errorResponse.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-      
-      return errorResponse;
-    }
-
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      const errorResponse = NextResponse.json(
-        { success: false, message: 'Please enter a valid email address' },
-        { status: 400 }
-      );
-      
-      // Add CORS headers
-      errorResponse.headers.set('Access-Control-Allow-Origin', '*');
-      errorResponse.headers.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
-      errorResponse.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-      
-      return errorResponse;
-    }
-
-    // Check if user already exists
-    const existingUser = await userQueries.findByEmail(email);
-    if (existingUser) {
-      const errorResponse = NextResponse.json(
-        { success: false, message: 'User with this email already exists' },
-        { status: 400 }
-      );
-      
-      // Add CORS headers
-      errorResponse.headers.set('Access-Control-Allow-Origin', '*');
-      errorResponse.headers.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
-      errorResponse.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-      
-      return errorResponse;
-    }
-
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Create new user
-    const user = await userQueries.create({
-      name,
-      email,
-      password: hashedPassword,
-      company,
-      plan: plan || 'starter'
-    });
-
-    // Create organization for the user
-    const organization = await organizationQueries.create({
-      name: company || `${name}'s Organization`,
-      plan: plan || 'starter',
-      userId: user.id
-    });
+    // Proxy to the backend API for registration (which includes email sending)
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+    console.log('[REGISTER] Calling backend API:', `${backendUrl}/auth/register`);
     
+    const backendResponse = await fetch(`${backendUrl}/auth/register`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ name, email, password, company, plan }),
+    });
+
+    const data = await backendResponse.json();
+    console.log('[REGISTER] Backend response:', data);
+
+    if (!backendResponse.ok) {
+      const errorResponse = NextResponse.json(
+        { 
+          success: false, 
+          message: data.message || 'Registration failed' 
+        },
+        { status: backendResponse.status }
+      );
+      
+      // Add CORS headers
+      errorResponse.headers.set('Access-Control-Allow-Origin', '*');
+      errorResponse.headers.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+      errorResponse.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+      
+      return errorResponse;
+    }
+
     const response = NextResponse.json({
       success: true,
-      message: 'Registration successful! Please check your email for verification.',
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        company: user.company || 'Personal',
-        plan: user.plan,
-        organizationId: user.organizationId,
-        status: user.status
-      }
+      message: data.message || 'Registration successful! Please check your email for verification.',
+      email: data.email
     });
     
     // Add CORS headers
@@ -122,8 +79,13 @@ export async function POST(request: NextRequest) {
     return response;
 
   } catch (error) {
+    console.error('[REGISTER] Error:', error);
     const errorResponse = NextResponse.json(
-      { success: false, message: 'Registration failed. Please try again.' },
+      { 
+        success: false, 
+        message: 'Registration failed. Please try again.',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     );
     

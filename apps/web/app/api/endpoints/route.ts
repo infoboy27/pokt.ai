@@ -79,7 +79,18 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const orgId = searchParams.get('orgId') || 'org-1';
+    
+    // Get user ID from cookie
+    const userId = request.cookies.get('user_id')?.value;
+    if (!userId) {
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+    }
+    
+    // Get user's organization ID
+    const { organizationQueries } = await import('@/lib/database');
+    const organizations = await organizationQueries.findByUserId(userId);
+    const orgId = organizations?.[0]?.id || 'org-1';
+    
     const customerId = searchParams.get('customerId') || undefined;
     
     // Get endpoints filtered by organization and optionally by customer

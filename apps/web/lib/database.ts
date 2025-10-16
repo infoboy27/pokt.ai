@@ -52,22 +52,16 @@ export const userQueries = {
     company?: string;
     plan?: string;
   }) {
-    // Generate 6-digit verification code
-    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes from now
-    
     const result = await query(
-      `INSERT INTO users (id, email, name, auth0_sub, password, verification_code, verification_code_expires_at, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+      `INSERT INTO users (id, email, name, auth0_sub, password, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
        RETURNING *`,
       [
         `user_${Date.now()}`,
         userData.email, 
         userData.name, 
         `auth0|user_${Date.now()}`, // Generate auth0_sub
-        userData.password,
-        verificationCode,
-        expiresAt
+        userData.password
       ]
     );
     return result.rows[0];
@@ -182,8 +176,8 @@ export const endpointQueries = {
     const endpointId = endpointData.name.replace(/\s+/g, '_').toLowerCase() + '_' + Date.now();
     
     const result = await query(
-      `INSERT INTO endpoints (id, name, base_url, health_url, description, is_active, org_id, chain_id, token, token_hash, rate_limit, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
+      `INSERT INTO endpoints (id, name, base_url, health_url, description, is_active, org_id, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
        RETURNING *`,
       [
         endpointId,
@@ -192,11 +186,7 @@ export const endpointQueries = {
         endpointData.rpcUrl || `https://pokt.ai/api/health?endpoint=${endpointId}`,
         `Ethereum ${endpointData.chainId} endpoint`,
         true,
-        endpointData.organizationId,
-        endpointData.chainId.toString(),
-        endpointData.apiKey,
-        endpointData.apiKey ? require('crypto').createHash('sha256').update(endpointData.apiKey).digest('hex') : '',
-        endpointData.rateLimit || 1000
+        endpointData.organizationId
       ]
     );
     return result.rows[0];
@@ -206,6 +196,14 @@ export const endpointQueries = {
     const result = await query(
       'UPDATE endpoints SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
       [status, id]
+    );
+    return result.rows[0] || null;
+  },
+
+  async updateUrl(id: string, rpcUrl: string) {
+    const result = await query(
+      'UPDATE endpoints SET base_url = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
+      [rpcUrl, id]
     );
     return result.rows[0] || null;
   },

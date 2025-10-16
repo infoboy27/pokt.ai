@@ -4,3 +4,13 @@ export async function GET(request: NextRequest) {
   console.log('[TEST] Endpoint called');
   return NextResponse.json({ message: 'Test endpoint working' });
 }
+
+
+
+
+
+
+
+
+
+

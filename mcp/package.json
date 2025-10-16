@@ -1,0 +1,63 @@
+{
+  "name": "@poktai/mcp-server",
+  "version": "1.0.0",
+  "description": "Model Context Protocol server for chat.pokt.ai - AI-powered blockchain interactions via Pocket Network",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "poktai-mcp": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts",
+    "start": "node dist/index.js",
+    "watch": "tsc --watch",
+    "lint": "eslint src --ext .ts",
+    "format": "prettier --write 'src/**/*.ts'",
+    "test": "jest"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "blockchain",
+    "rpc",
+    "ethereum",
+    "polygon",
+    "pocket-network",
+    "pokt",
+    "ai",
+    "claude",
+    "chatgpt"
+  ],
+  "author": "pokt.ai",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.5.0",
+    "axios": "^1.6.5",
+    "ethers": "^6.10.0",
+    "dotenv": "^16.4.1",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.5",
+    "@typescript-eslint/eslint-plugin": "^6.19.1",
+    "@typescript-eslint/parser": "^6.19.1",
+    "eslint": "^8.56.0",
+    "prettier": "^3.2.4",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3",
+    "jest": "^29.7.0",
+    "@types/jest": "^29.5.11"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
+
+
+
+
+
+
+

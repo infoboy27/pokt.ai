@@ -13,11 +13,11 @@ export class EmailService {
       
       if (!sendGridApiKey || sendGridApiKey === 'SG.your-sendgrid-api-key') {
         this.logger.warn('SENDGRID_API_KEY not configured, using development fallback');
-        // In development, use hardcoded verification code
-        const hardcodedCode = '000000';
+        // In development, log the actual verification code that was generated
         this.logger.log(`📧 VERIFICATION EMAIL for ${email}:`);
-        this.logger.log(`   Code: ${hardcodedCode} (hardcoded for development)`);
+        this.logger.log(`   Code: ${verificationCode} (check console - email not sent)`);
         this.logger.log(`   Please use this code to verify your account`);
+        this.logger.log(`   Note: Configure SENDGRID_API_KEY to send actual emails`);
         return true;
       }
 
@@ -50,10 +50,13 @@ export class EmailService {
       });
 
       if (response.ok) {
-        this.logger.log(`Verification email sent to ${email}`);
+        this.logger.log(`✅ Verification email sent to ${email}`);
+        this.logger.log(`📧 VERIFICATION CODE: ${verificationCode}`);
+        this.logger.log(`   Use this code to verify your account`);
         return true;
       } else {
         this.logger.error(`Failed to send email to ${email}: ${response.statusText}`);
+        this.logger.error(`Verification code for ${email}: ${verificationCode} (email failed to send)`);
         return false;
       }
     } catch (error) {

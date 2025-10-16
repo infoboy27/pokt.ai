@@ -70,78 +70,23 @@ export default function MembersPage() {
   useEffect(() => {
     const fetchMembers = async () => {
       try {
-        // Mock data for now - in real implementation, fetch from API
-        setMembers([
-          {
-            id: '1',
-            name: 'John Smith',
-            email: 'john@company.com',
-            role: 'owner',
-            status: 'active',
-            lastActive: new Date().toISOString(),
-            joinedAt: '2024-01-15T10:00:00Z',
-            permissions: ['all'],
-            endpointsCreated: 12,
-            apiKeysGenerated: 8
+        // Fetch real data from API
+        const response = await fetch('/api/members', {
+          headers: {
+            'Content-Type': 'application/json',
           },
-          {
-            id: '2',
-            name: 'Sarah Johnson',
-            email: 'sarah@company.com',
-            role: 'admin',
-            status: 'active',
-            lastActive: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-            joinedAt: '2024-02-01T14:30:00Z',
-            permissions: ['manage_endpoints', 'manage_api_keys', 'view_usage'],
-            endpointsCreated: 8,
-            apiKeysGenerated: 5
-          },
-          {
-            id: '3',
-            name: 'Mike Chen',
-            email: 'mike@company.com',
-            role: 'developer',
-            status: 'active',
-            lastActive: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-            joinedAt: '2024-02-15T09:15:00Z',
-            permissions: ['create_endpoints', 'view_usage'],
-            endpointsCreated: 15,
-            apiKeysGenerated: 12
-          },
-          {
-            id: '4',
-            name: 'Emily Davis',
-            email: 'emily@company.com',
-            role: 'viewer',
-            status: 'pending',
-            lastActive: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-            joinedAt: '2024-03-01T16:45:00Z',
-            permissions: ['view_usage'],
-            endpointsCreated: 0,
-            apiKeysGenerated: 0
-          }
-        ]);
+        });
 
-        setInvitations([
-          {
-            id: '1',
-            email: 'alex@company.com',
-            role: 'developer',
-            status: 'pending',
-            invitedBy: 'John Smith',
-            invitedAt: '2024-03-10T10:00:00Z',
-            expiresAt: '2024-03-17T10:00:00Z'
-          },
-          {
-            id: '2',
-            email: 'lisa@company.com',
-            role: 'viewer',
-            status: 'pending',
-            invitedBy: 'Sarah Johnson',
-            invitedAt: '2024-03-11T14:30:00Z',
-            expiresAt: '2024-03-18T14:30:00Z'
-          }
-        ]);
+        if (response.ok) {
+          const data = await response.json();
+          setMembers(data.members || []);
+          setInvitations(data.invitations || []);
+        } else {
+          console.error('Failed to fetch members:', response.statusText);
+          // Fallback to empty arrays if API fails
+          setMembers([]);
+          setInvitations([]);
+        }
       } catch (error) {
         console.error('Error fetching members:', error);
       } finally {
@@ -157,23 +102,41 @@ export default function MembersPage() {
 
     setSendingInvite(true);
     try {
-      // In real implementation, call API to send invitation
-      const newInvitation: Invitation = {
-        id: Date.now().toString(),
-        email: inviteEmail,
-        role: inviteRole,
-        status: 'pending',
-        invitedBy: 'You',
-        invitedAt: new Date().toISOString(),
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
-      };
+      // Call API to send invitation with email
+      const response = await fetch('/api/members/invite', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: inviteEmail,
+          role: inviteRole
+        })
+      });
 
-      setInvitations(prev => [...prev, newInvitation]);
-      setInviteEmail('');
-      setInviteRole('developer');
-      setShowInviteModal(false);
+      const data = await response.json();
+
+      if (data.success) {
+        const newInvitation: Invitation = {
+          id: data.invitation.id,
+          email: inviteEmail,
+          role: inviteRole,
+          status: 'pending',
+          invitedBy: 'You',
+          invitedAt: new Date().toISOString(),
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+        };
+
+        setInvitations(prev => [...prev, newInvitation]);
+        setInviteEmail('');
+        setInviteRole('developer');
+        setShowInviteModal(false);
+      } else {
+        alert('Failed to send invitation: ' + data.message);
+      }
     } catch (error) {
       console.error('Error sending invitation:', error);
+      alert('Failed to send invitation. Please try again.');
     } finally {
       setSendingInvite(false);
     }
@@ -190,10 +153,50 @@ export default function MembersPage() {
 
   const handleResendInvitation = async (invitationId: string) => {
     try {
-      // In real implementation, call API to resend invitation
-      console.log('Resending invitation:', invitationId);
+      const response = await fetch(`/api/members/invitations/${invitationId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Invitation resent:', data.message);
+        // You could add a toast notification here
+        alert('Invitation resent successfully!');
+      } else {
+        console.error('Failed to resend invitation:', response.statusText);
+        alert('Failed to resend invitation. Please try again.');
+      }
     } catch (error) {
       console.error('Error resending invitation:', error);
+      alert('Error resending invitation. Please try again.');
+    }
+  };
+
+  const handleCancelInvitation = async (invitationId: string) => {
+    try {
+      const response = await fetch(`/api/members/invitations/${invitationId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Invitation cancelled:', data.message);
+        // Remove the invitation from the local state
+        setInvitations(prev => prev.filter(inv => inv.id !== invitationId));
+        alert('Invitation cancelled successfully!');
+      } else {
+        console.error('Failed to cancel invitation:', response.statusText);
+        alert('Failed to cancel invitation. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error cancelling invitation:', error);
+      alert('Error cancelling invitation. Please try again.');
     }
   };
 
@@ -418,11 +421,20 @@ export default function MembersPage() {
                   </div>
                   
                   <div className="flex space-x-2">
-                    <Button variant="outline" size="sm">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleResendInvitation(invitation.id)}
+                    >
                       <Send className="mr-2 h-3 w-3" />
                       Resend
                     </Button>
-                    <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="text-red-600 hover:text-red-700"
+                      onClick={() => handleCancelInvitation(invitation.id)}
+                    >
                       <XCircle className="mr-2 h-3 w-3" />
                       Cancel
                     </Button>

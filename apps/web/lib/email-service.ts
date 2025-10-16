@@ -1,16 +1,4 @@
-import nodemailer from 'nodemailer';
-
-interface EmailConfig {
-  host: string;
-  port: number;
-  secure: boolean;
-  auth: {
-    user: string;
-    pass: string;
-  };
-}
-
-interface EmailOptions {
+interface EmailData {
   to: string;
   subject: string;
   html: string;
@@ -19,36 +7,48 @@ interface EmailOptions {
 }
 
 class EmailService {
-  private transporter: nodemailer.Transporter;
-  private config: EmailConfig;
+  private apiKey: string;
 
   constructor() {
-    this.config = {
-      host: 'smtp.sendgrid.net',
-      port: 587, // Use TLS port
-      secure: false, // Use TLS
-      auth: {
-        user: 'apikey',
-        pass: process.env.SENDGRID_API_KEY || ''
-      }
-    };
-
-    this.transporter = nodemailer.createTransporter(this.config);
+    this.apiKey = process.env.SENDGRID_API_KEY || '';
   }
 
-  async sendEmail(options: EmailOptions): Promise<boolean> {
+  async sendEmail(emailData: EmailData): Promise<boolean> {
     try {
-      const mailOptions = {
-        from: options.from || 'noreply@pokt.ai',
-        to: options.to,
-        subject: options.subject,
-        html: options.html,
-        text: options.text || this.stripHtml(options.html)
-      };
+      const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          personalizations: [
+            {
+              to: [{ email: emailData.to }],
+              subject: emailData.subject
+            }
+          ],
+          from: { 
+            email: emailData.from || 'noreply@pokt.ai',
+            name: 'pokt.ai'
+          },
+          content: [
+            {
+              type: 'text/html',
+              value: emailData.html
+            }
+          ]
+        })
+      });
 
-      const result = await this.transporter.sendMail(mailOptions);
-      console.log('Email sent successfully:', result.messageId);
-      return true;
+      if (response.ok) {
+        console.log('Email sent successfully via SendGrid API');
+        return true;
+      } else {
+        const errorText = await response.text();
+        console.error('SendGrid API error:', response.status, errorText);
+        return false;
+      }
     } catch (error) {
       console.error('Error sending email:', error);
       return false;
@@ -364,6 +364,77 @@ class EmailService {
       </body>
       </html>
     `;
+  }
+
+  // Additional email methods for new functionality
+  async sendUsageAlert(email: string, name: string, title: string, message: string, severity: 'info' | 'warning' | 'error'): Promise<boolean> {
+    const severityColors = {
+      info: '#3b82f6',
+      warning: '#f59e0b',
+      error: '#ef4444'
+    };
+
+    return this.sendEmail({
+      to: email,
+      subject: `⚠️ ${title} - pokt.ai`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Usage Alert - pokt.ai</title>
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f8fafc; }
+            .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+            .header { background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%); color: white; padding: 40px 30px; text-align: center; }
+            .logo { font-size: 2.5rem; font-weight: 800; margin-bottom: 10px; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); }
+            .content { padding: 40px 30px; }
+            .footer { background: #f8fafc; padding: 30px; text-align: center; color: #64748b; font-size: 14px; }
+            .alert-box { background: #f8fafc; border-left: 4px solid ${severityColors[severity]}; padding: 20px; margin: 20px 0; border-radius: 0 8px 8px 0; }
+            .button { display: inline-block; background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 20px 0; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <div class="logo">pokt.ai</div>
+              <h1>Usage Alert</h1>
+            </div>
+            <div class="content">
+              <h2>Hello ${name}!</h2>
+              
+              <div class="alert-box">
+                <h3>${title}</h3>
+                <p>${message}</p>
+              </div>
+              
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://pokt.ai'}/usage" class="button">View Usage Dashboard</a>
+              </div>
+              
+              <p>You can manage your usage limits and alerts in your account settings.</p>
+            </div>
+            <div class="footer">
+              <p>© 2024 pokt.ai. All rights reserved.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `
+    });
+  }
+
+  async sendBillingAlert(email: string, name: string, title: string, message: string, severity: 'info' | 'warning' | 'error'): Promise<boolean> {
+    return this.sendUsageAlert(email, name, title, message, severity);
+  }
+
+  async sendEndpointAlert(email: string, name: string, title: string, message: string, severity: 'info' | 'warning' | 'error'): Promise<boolean> {
+    return this.sendUsageAlert(email, name, title, message, severity);
+  }
+
+  async sendSecurityAlert(email: string, name: string, title: string, message: string, severity: 'info' | 'warning' | 'error'): Promise<boolean> {
+    return this.sendUsageAlert(email, name, title, message, severity);
   }
 
   private stripHtml(html: string): string {

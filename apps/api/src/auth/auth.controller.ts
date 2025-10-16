@@ -29,8 +29,12 @@ export class AuthController {
   @ApiResponse({ status: 400, description: 'Bad request' })
   async register(@Body() registerUserDto: RegisterUserDto) {
     try {
-      // Generate a 6-digit verification code (hardcoded for development)
-      const verificationCode = '000000';
+      // Generate a random 6-digit verification code
+      const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+      
+      // Set expiration time (15 minutes from now)
+      const verificationCodeExpiresAt = new Date();
+      verificationCodeExpiresAt.setMinutes(verificationCodeExpiresAt.getMinutes() + 15);
       
       // Hash the password
       const hashedPassword = await bcrypt.hash(registerUserDto.password, 10);
@@ -42,7 +46,9 @@ export class AuthController {
           name: registerUserDto.name,
           password: hashedPassword,
           auth0Sub: `auth0|${Date.now()}`, // Mock Auth0 sub
-          // Add verification fields to schema if needed
+          verificationCode: verificationCode,
+          verificationCodeExpiresAt: verificationCodeExpiresAt,
+          isEmailVerified: false,
         },
       });
 
@@ -88,11 +94,6 @@ export class AuthController {
   @ApiResponse({ status: 400, description: 'Invalid verification code' })
   async verifyEmail(@Body() body: { email: string; code: string }) {
     try {
-      // In a real implementation, you would:
-      // 1. Check if the verification code is valid and not expired
-      // 2. Update user's verification status
-      // 3. For now, we'll just return success
-      
       const user = await this.prisma.user.findUnique({
         where: { email: body.email },
       });
@@ -101,26 +102,112 @@ export class AuthController {
         throw new Error('User not found');
       }
 
-      // TODO: Implement proper verification code validation
-      // For development, accept the hardcoded code '000000'
-      console.log(`Verification attempt: email=${body.email}, code=${body.code}`);
-      if (body.code !== '000000') {
-        console.log(`Invalid code: expected '000000', got '${body.code}'`);
-        throw new Error('Invalid verification code. Use 000000 for development.');
+      // Check if user already verified
+      if (user.isEmailVerified) {
+        return {
+          message: 'Email already verified. You can login.',
+          user: {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+          },
+        };
       }
-      console.log('Verification code is valid');
+
+      // Check if verification code exists
+      if (!user.verificationCode) {
+        throw new Error('No verification code found. Please register again.');
+      }
+
+      // Check if verification code matches
+      if (user.verificationCode !== body.code) {
+        console.log(`Invalid code: expected '${user.verificationCode}', got '${body.code}'`);
+        throw new Error('Invalid verification code.');
+      }
+
+      // Check if verification code is expired
+      const now = new Date();
+      if (user.verificationCodeExpiresAt && now > user.verificationCodeExpiresAt) {
+        throw new Error('Verification code has expired. Please register again.');
+      }
+
+      console.log('Verification code is valid, updating user status...');
+
+      // Update user verification status and clear verification code
+      const updatedUser = await this.prisma.user.update({
+        where: { email: body.email },
+        data: {
+          isEmailVerified: true,
+          verificationCode: null,
+          verificationCodeExpiresAt: null,
+        },
+      });
 
       return {
         message: 'Email verified successfully. You can now login.',
         user: {
-          id: user.id,
-          email: user.email,
-          name: user.name,
+          id: updatedUser.id,
+          email: updatedUser.email,
+          name: updatedUser.name,
         },
       };
     } catch (error) {
       console.error('Error verifying email:', error);
       throw new Error(`Email verification failed: ${error.message}`);
+    }
+  }
+
+  @Post('resend-verification')
+  @ApiOperation({ summary: 'Resend verification code' })
+  @ApiResponse({ status: 200, description: 'Verification code sent successfully' })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  async resendVerification(@Body() body: { email: string }) {
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: { email: body.email },
+      });
+
+      if (!user) {
+        throw new Error('User not found');
+      }
+
+      // Check if user is already verified
+      if (user.isEmailVerified) {
+        return {
+          message: 'Email already verified. You can login.',
+        };
+      }
+
+      // Generate a new random 6-digit verification code
+      const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+      
+      // Set new expiration time (15 minutes from now)
+      const verificationCodeExpiresAt = new Date();
+      verificationCodeExpiresAt.setMinutes(verificationCodeExpiresAt.getMinutes() + 15);
+
+      // Update user with new verification code
+      await this.prisma.user.update({
+        where: { email: body.email },
+        data: {
+          verificationCode: verificationCode,
+          verificationCodeExpiresAt: verificationCodeExpiresAt,
+        },
+      });
+
+      // Send verification email with new code
+      const emailSent = await this.emailService.sendVerificationEmail(user.email, verificationCode);
+      
+      if (!emailSent) {
+        console.warn(`Failed to send verification email to ${user.email}, but code was generated`);
+      }
+
+      return {
+        message: 'New verification code sent. Please check your email.',
+        email: user.email,
+      };
+    } catch (error) {
+      console.error('Error resending verification code:', error);
+      throw new Error(`Failed to resend verification code: ${error.message}`);
     }
   }
 
@@ -156,6 +243,10 @@ export class AuthController {
       const authHeader = req.headers.authorization;
       const token = authHeader?.replace('Bearer ', '');
       const cookieUserId = req.cookies?.user_id;
+      
+      console.log('[API AUTH/ME] Headers:', req.headers);
+      console.log('[API AUTH/ME] Cookies:', req.cookies);
+      console.log('[API AUTH/ME] User ID from cookie:', cookieUserId);
       
       // Check for valid authentication (either token or cookie)
       const hasValidToken = token && token === 'mock-jwt-token-for-testing';
@@ -293,6 +384,15 @@ export class AuthController {
         return {
           success: false,
           message: 'Invalid email or password',
+        };
+      }
+
+      // Check if email is verified
+      if (!user.isEmailVerified) {
+        return {
+          success: false,
+          message: 'Please verify your email before logging in. Check your inbox for the verification code.',
+          requiresVerification: true,
         };
       }
 

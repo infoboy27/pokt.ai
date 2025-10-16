@@ -34,28 +34,28 @@ import { useToast } from '@/hooks/use-toast';
 // Network configuration with logos and categories
 const NETWORKS = [
   // Mainnets - EVM
-  { id: 'eth', name: 'Ethereum', category: 'EVM Mainnet', icon: '⟠', popular: true },
-  { id: 'bsc', name: 'BNB Smart Chain', category: 'EVM Mainnet', icon: '🔶', popular: true },
-  { id: 'poly', name: 'Polygon', category: 'EVM Mainnet', icon: '🟣', popular: true },
-  { id: 'arb-one', name: 'Arbitrum One', category: 'EVM Mainnet', icon: '🔵', popular: true },
-  { id: 'opt', name: 'Optimism', category: 'EVM Mainnet', icon: '🔴', popular: true },
-  { id: 'base', name: 'Base', category: 'EVM Mainnet', icon: '🔷', popular: true },
-  { id: 'avax', name: 'Avalanche', category: 'EVM Mainnet', icon: '❄️' },
-  { id: 'linea', name: 'Linea', category: 'EVM Mainnet', icon: '📐' },
-  { id: 'mantle', name: 'Mantle', category: 'EVM Mainnet', icon: '🌐' },
-  { id: 'blast', name: 'Blast', category: 'EVM Mainnet', icon: '💥' },
-  { id: 'fantom', name: 'Fantom', category: 'EVM Mainnet', icon: '👻' },
-  { id: 'gnosis', name: 'Gnosis Chain', category: 'EVM Mainnet', icon: '🦉' },
-  { id: 'celo', name: 'Celo', category: 'EVM Mainnet', icon: '🌱' },
-  { id: 'metis', name: 'Metis', category: 'EVM Mainnet', icon: '🔷' },
-  { id: 'boba', name: 'Boba Network', category: 'EVM Mainnet', icon: '🧋' },
-  { id: 'fuse', name: 'Fuse', category: 'EVM Mainnet', icon: '⚡' },
-  { id: 'kava', name: 'Kava', category: 'EVM Mainnet', icon: '🌿' },
-  { id: 'fraxtal', name: 'Fraxtal', category: 'EVM Mainnet', icon: '❄️' },
-  { id: 'oasys', name: 'Oasys', category: 'EVM Mainnet', icon: '🎮' },
-  { id: 'ink', name: 'Ink', category: 'EVM Mainnet', icon: '🖊️' },
-  { id: 'bera', name: 'Berachain', category: 'EVM Mainnet', icon: '🐻' },
-  { id: 'sonic', name: 'Sonic', category: 'EVM Mainnet', icon: '💨' },
+  { id: 'eth', name: 'Ethereum', category: 'EVM Mainnet', icon: '⟠', popular: true, chainId: 1 },
+  { id: 'bsc', name: 'BNB Smart Chain', category: 'EVM Mainnet', icon: '🔶', popular: true, chainId: 56 },
+  { id: 'poly', name: 'Polygon', category: 'EVM Mainnet', icon: '🟣', popular: true, chainId: 137 },
+  { id: 'arb-one', name: 'Arbitrum One', category: 'EVM Mainnet', icon: '🔵', popular: true, chainId: 42161 },
+  { id: 'opt', name: 'Optimism', category: 'EVM Mainnet', icon: '🔴', popular: true, chainId: 10 },
+  { id: 'base', name: 'Base', category: 'EVM Mainnet', icon: '🔷', popular: true, chainId: 8453 },
+  { id: 'avax', name: 'Avalanche', category: 'EVM Mainnet', icon: '❄️', chainId: 43114 },
+  { id: 'linea', name: 'Linea', category: 'EVM Mainnet', icon: '📐', chainId: 59144 },
+  { id: 'mantle', name: 'Mantle', category: 'EVM Mainnet', icon: '🌐', chainId: 5000 },
+  { id: 'blast', name: 'Blast', category: 'EVM Mainnet', icon: '💥', chainId: 81457 },
+  { id: 'fantom', name: 'Fantom', category: 'EVM Mainnet', icon: '👻', chainId: 250 },
+  { id: 'gnosis', name: 'Gnosis Chain', category: 'EVM Mainnet', icon: '🦉', chainId: 100 },
+  { id: 'celo', name: 'Celo', category: 'EVM Mainnet', icon: '🌱', chainId: 42220 },
+  { id: 'metis', name: 'Metis', category: 'EVM Mainnet', icon: '🔷', chainId: 1088 },
+  { id: 'boba', name: 'Boba Network', category: 'EVM Mainnet', icon: '🧋', chainId: 288 },
+  { id: 'fuse', name: 'Fuse', category: 'EVM Mainnet', icon: '⚡', chainId: 122 },
+  { id: 'kava', name: 'Kava', category: 'EVM Mainnet', icon: '🌿', chainId: 2222 },
+  { id: 'fraxtal', name: 'Fraxtal', category: 'EVM Mainnet', icon: '❄️', chainId: 252 },
+  { id: 'oasys', name: 'Oasys', category: 'EVM Mainnet', icon: '🎮', chainId: 248 },
+  { id: 'ink', name: 'Ink', category: 'EVM Mainnet', icon: '🖊️', chainId: 200 },
+  { id: 'bera', name: 'Berachain', category: 'EVM Mainnet', icon: '🐻', chainId: 80085 },
+  { id: 'sonic', name: 'Sonic', category: 'EVM Mainnet', icon: '💨', chainId: 146 },
   
   // Non-EVM Mainnets
   { id: 'solana', name: 'Solana', category: 'Non-EVM Mainnet', icon: '◎', popular: true },
@@ -82,7 +82,7 @@ export default function EndpointsPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [newEndpoint, setNewEndpoint] = useState({
     name: '',
-    chainId: '',
+    chainId: 1, // Default to Ethereum mainnet
   });
   const { toast } = useToast();
 
@@ -162,7 +162,7 @@ export default function EndpointsPage() {
           relays: 0
         };
         setEndpoints(prev => [endpointWithStaticKey, ...prev]);
-        setNewEndpoint({ name: '', chainId: '' });
+        setNewEndpoint({ name: '', chainId: 1 });
         setIsCreateDialogOpen(false);
         
         toast({
@@ -220,7 +220,7 @@ export default function EndpointsPage() {
     if (network) {
       setNewEndpoint(prev => ({
         ...prev,
-        chainId: networkId,
+        chainId: network.chainId || 1, // Use numeric chainId, default to 1 (Ethereum)
         name: prev.name || network.name,
       }));
     }
@@ -394,100 +394,74 @@ export default function EndpointsPage() {
         </div>
       )}
 
-      {/* Endpoints List */}
+      {/* Endpoints List - Compact List Format */}
       {!loading && endpoints.length > 0 && (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {endpoints.map((endpoint) => {
-            const network = NETWORKS.find(n => n.id === endpoint.chainId);
+            const network = NETWORKS.find(n => n.chainId === endpoint.chainId);
             
             return (
-              <Card key={endpoint.id} className="hover:shadow-lg transition-shadow">
-                <CardHeader className="pb-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-2xl">
-                        {network?.icon || '🌐'}
-                      </div>
-                      <div>
-                        <CardTitle className="text-xl">{endpoint.name}</CardTitle>
-                        <CardDescription className="text-base">
-                          {network?.name || endpoint.chainId}
-                        </CardDescription>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="default" className="text-sm">Active</Badge>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => deleteEndpoint(endpoint.id)}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
+              <div key={endpoint.id} className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-lg">
+                    {network?.icon || '🌐'}
                   </div>
-                </CardHeader>
+                  <div>
+                    <div className="font-semibold text-gray-900">{endpoint.name}</div>
+                    <div className="text-sm text-gray-500">{network?.name || `Chain ${endpoint.chainId}`}</div>
+                  </div>
+                </div>
                 
-                <CardContent className="space-y-6">
-                  {/* Endpoint URL */}
-                  <div className="space-y-2">
-                    <Label className="text-sm font-semibold text-gray-700">RPC Endpoint URL</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        value={endpoint.endpointUrl}
-                        readOnly
-                        className="font-mono text-sm bg-gray-50"
-                      />
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => copyToClipboard(endpoint.endpointUrl, 'Endpoint URL')}
-                      >
-                        <Copy className="w-4 h-4" />
-                      </Button>
-                      <Button variant="outline" size="icon" asChild>
-                        <a href={endpoint.endpointUrl} target="_blank" rel="noopener noreferrer">
-                          <ExternalLink className="w-4 h-4" />
-                        </a>
-                      </Button>
+                <div className="flex items-center gap-6">
+                  {/* Stats */}
+                  <div className="flex items-center gap-4 text-sm">
+                    <div className="flex items-center gap-1">
+                      <Activity className="w-4 h-4 text-gray-500" />
+                      <span className="text-gray-600">{(endpoint.billing?.totalRelays || endpoint.relays || 0).toLocaleString()}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <DollarSign className="w-4 h-4 text-gray-500" />
+                      <span className="text-gray-600">${(endpoint.billing?.estimatedMonthlyCostDollars || 0).toFixed(4)}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Clock className="w-4 h-4 text-gray-500" />
+                      <span className="text-gray-600">{new Date(endpoint.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
                     </div>
                   </div>
-
-                  {/* API Key field hidden - using static API key */}
-
-                  {/* Stats Row */}
-                  <div className="grid grid-cols-3 gap-4 pt-4 border-t">
-                    <div className="text-center">
-                      <div className="flex items-center justify-center gap-1 text-sm text-gray-600 mb-1">
-                        <Activity className="w-4 h-4" />
-                        <span>Requests</span>
-                      </div>
-                      <div className="text-xl font-bold">
-                        {(endpoint.billing?.totalRelays || endpoint.relays || 0).toLocaleString()}
-                      </div>
-                    </div>
-                    <div className="text-center">
-                      <div className="flex items-center justify-center gap-1 text-sm text-gray-600 mb-1">
-                        <DollarSign className="w-4 h-4" />
-                        <span>Cost</span>
-                      </div>
-                      <div className="text-xl font-bold text-green-600">
-                        ${(endpoint.billing?.estimatedMonthlyCostDollars || 0).toFixed(4)}
-                      </div>
-                    </div>
-                    <div className="text-center">
-                      <div className="flex items-center justify-center gap-1 text-sm text-gray-600 mb-1">
-                        <Clock className="w-4 h-4" />
-                        <span>Created</span>
-                      </div>
-                      <div className="text-xl font-bold">
-                        {new Date(endpoint.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                      </div>
-                    </div>
+                  
+                  {/* Actions */}
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => copyToClipboard(endpoint.endpointUrl, 'Endpoint URL')}
+                      className="text-xs"
+                    >
+                      <Copy className="w-3 h-3 mr-1" />
+                      Copy URL
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      asChild
+                    >
+                      <a href={endpoint.endpointUrl} target="_blank" rel="noopener noreferrer" className="text-xs">
+                        <ExternalLink className="w-3 h-3 mr-1" />
+                        Test
+                      </a>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => deleteEndpoint(endpoint.id)}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50 text-xs"
+                    >
+                      <Trash2 className="w-3 h-3 mr-1" />
+                      Delete
+                    </Button>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             );
           })}
         </div>

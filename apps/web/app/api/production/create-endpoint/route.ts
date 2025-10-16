@@ -6,11 +6,33 @@ import { endpointQueries } from '@/lib/database';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, chainId, rateLimit = 1000, organizationId = 'org-1' } = body;
+    
+    // Get user ID from cookie
+    const userId = request.cookies.get('user_id')?.value;
+    if (!userId) {
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+    }
+    
+    // Get user's organization ID
+    const { organizationQueries } = await import('@/lib/database');
+    const organizations = await organizationQueries.findByUserId(userId);
+    const userOrgId = organizations?.[0]?.id;
+    
+    if (!userOrgId) {
+      return NextResponse.json({ error: 'User has no organization' }, { status: 400 });
+    }
+    
+    const { name, chainId, rateLimit = 1000, organizationId = userOrgId } = body;
 
     // Validate and set default name if empty, ensure uniqueness
     const baseName = name && name.trim() ? name.trim() : `Endpoint`;
     const endpointName = `${baseName}_${Date.now()}`;
+
+    // Validate and convert chainId to number
+    const validChainId = chainId ? parseInt(chainId.toString()) : 1; // Default to Ethereum mainnet
+    if (isNaN(validChainId)) {
+      throw new Error('Invalid chainId: must be a number');
+    }
 
     // Step 1: Generate unique customer ID and API key
     const customerId = `cust_${randomBytes(8).toString('hex')}`;
@@ -81,13 +103,20 @@ export async function POST(request: NextRequest) {
     // Step 4: Create endpoint in pokt.ai system using PostgreSQL
     const endpoint = await endpointQueries.create({
       name: endpointName,
-      chainId,
+      chainId: validChainId,
       organizationId,
       customerId,
       rpcUrl: `https://pokt.ai/api/gateway?endpoint=${endpointName.replace(/\s+/g, '_').toLowerCase()}`,
       apiKey,
       rateLimit,
     });
+
+    // Update the endpoint URL to use the actual database ID
+    const actualEndpointId = endpoint.id;
+    const correctRpcUrl = `https://pokt.ai/api/gateway?endpoint=${actualEndpointId}`;
+    
+    // Update the endpoint with the correct URL
+    await endpointQueries.updateUrl(actualEndpointId, correctRpcUrl);
 
     if (!endpoint) {
       throw new Error('Failed to create endpoint in pokt.ai system');
@@ -99,9 +128,9 @@ export async function POST(request: NextRequest) {
       endpoint: {
         id: endpoint.id,
         name: endpoint.name,
-        chainId: chainId,
-        endpointUrl: endpoint.base_url,
-        rpcUrl: endpoint.health_url,
+        chainId: validChainId,
+        endpointUrl: correctRpcUrl,
+        rpcUrl: correctRpcUrl,
         token: apiKey,
         rateLimit: rateLimit,
         status: endpoint.is_active ? 'active' : 'inactive',

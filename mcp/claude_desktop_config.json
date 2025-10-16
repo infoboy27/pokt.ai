@@ -1,0 +1,21 @@
+{
+  "mcpServers": {
+    "chat.pokt.ai": {
+      "command": "node",
+      "args": ["/home/ubuntu/pokt.ai/mcp/dist/index.js"],
+      "env": {
+        "POKT_API_URL": "https://shannon-grove-api.mainnet.poktroll.com",
+        "POKTAI_GATEWAY_URL": "https://pokt.ai/api/gateway",
+        "MCP_SERVER_NAME": "chat.pokt.ai",
+        "LOG_LEVEL": "info"
+      }
+    }
+  }
+}
+
+
+
+
+
+
+

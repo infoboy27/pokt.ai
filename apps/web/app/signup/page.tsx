@@ -26,14 +26,12 @@ export default function SignupPage() {
     email: '',
     password: '',
     confirmPassword: '',
-    company: '',
-    plan: 'starter'
+    company: ''
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [step, setStep] = useState(1);
   const router = useRouter();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -44,7 +42,7 @@ export default function SignupPage() {
     }));
   };
 
-  const validateStep1 = () => {
+  const validateForm = () => {
     if (!formData.name || !formData.email || !formData.password) {
       setError('Please fill in all required fields');
       return false;
@@ -60,15 +58,13 @@ export default function SignupPage() {
     return true;
   };
 
-  const handleStep1Next = () => {
-    if (validateStep1()) {
-      setError('');
-      setStep(2);
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!validateForm()) {
+      return;
+    }
+    
     setLoading(true);
     setError('');
 
@@ -84,7 +80,6 @@ export default function SignupPage() {
           email: formData.email,
           password: formData.password,
           company: formData.company,
-          plan: formData.plan,
         }),
       });
 
@@ -96,7 +91,7 @@ export default function SignupPage() {
       const result = await response.json();
       
       // Track signup event
-      trackUserSignup(formData.plan);
+      trackUserSignup('pay-as-you-go');
       
       // Store email for verification
       localStorage.setItem('pending_verification_email', formData.email);
@@ -119,18 +114,29 @@ export default function SignupPage() {
             Back to Home
           </Link>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Create Account</h1>
-          <p className="text-gray-600">Join pokt.ai and start building with our RPC infrastructure</p>
+          <p className="text-gray-600">Join pokt.ai and start building with our pay-as-you-go RPC infrastructure</p>
         </div>
 
         <Card>
           <CardHeader>
             <CardTitle className="text-center">
-              {step === 1 ? 'Create Your Account' : 'Choose Your Plan'}
+              Create Your Account
             </CardTitle>
+            <div className="text-center mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+              <div className="flex items-center justify-center mb-2">
+                <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
+                <span className="font-semibold text-green-800">Pay-as-you-go pricing</span>
+              </div>
+              <p className="text-sm text-green-700">
+                Start free, pay only for what you use. No monthly commitments or hidden fees.
+              </p>
+              <div className="mt-2 text-sm text-green-600">
+                <strong>$0.0001 per request</strong> • No setup fees • No minimums
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
-            {step === 1 ? (
-              <form onSubmit={(e) => { e.preventDefault(); handleStep1Next(); }} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <Label htmlFor="name">Full Name</Label>
                   <div className="relative">
@@ -213,18 +219,8 @@ export default function SignupPage() {
                   </div>
                 </div>
 
-                {error && (
-                  <div className="text-red-600 text-sm text-center">{error}</div>
-                )}
-
-                <Button type="submit" className="w-full" size="lg">
-                  Continue
-                </Button>
-              </form>
-            ) : (
-              <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
-                  <Label htmlFor="company">Company Name</Label>
+                  <Label htmlFor="company">Company Name (Optional)</Label>
                   <div className="relative">
                     <Building className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                     <Input
@@ -239,89 +235,14 @@ export default function SignupPage() {
                   </div>
                 </div>
 
-                <div>
-                  <Label>Choose Your Plan</Label>
-                  <div className="space-y-3">
-                    <div 
-                      className={`border rounded-lg p-4 cursor-pointer transition-colors ${
-                        formData.plan === 'starter' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
-                      }`}
-                      onClick={() => setFormData(prev => ({ ...prev, plan: 'starter' }))}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h3 className="font-semibold">Starter</h3>
-                          <p className="text-sm text-gray-600">Perfect for getting started</p>
-                        </div>
-                        <div className="text-right">
-                          <div className="font-bold">$29/month</div>
-                          <div className="text-sm text-gray-500">1M requests</div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div 
-                      className={`border rounded-lg p-4 cursor-pointer transition-colors ${
-                        formData.plan === 'pro' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
-                      }`}
-                      onClick={() => setFormData(prev => ({ ...prev, plan: 'pro' }))}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h3 className="font-semibold">Pro</h3>
-                          <p className="text-sm text-gray-600">For growing applications</p>
-                        </div>
-                        <div className="text-right">
-                          <div className="font-bold">$99/month</div>
-                          <div className="text-sm text-gray-500">10M requests</div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div 
-                      className={`border rounded-lg p-4 cursor-pointer transition-colors ${
-                        formData.plan === 'enterprise' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
-                      }`}
-                      onClick={() => setFormData(prev => ({ ...prev, plan: 'enterprise' }))}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h3 className="font-semibold">Enterprise</h3>
-                          <p className="text-sm text-gray-600">Custom solutions</p>
-                        </div>
-                        <div className="text-right">
-                          <div className="font-bold">Custom</div>
-                          <div className="text-sm text-gray-500">Unlimited</div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
                 {error && (
                   <div className="text-red-600 text-sm text-center">{error}</div>
                 )}
 
-                <div className="flex space-x-3">
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    onClick={() => setStep(1)}
-                    className="flex-1"
-                  >
-                    Back
-                  </Button>
-                  <Button 
-                    type="submit" 
-                    className="flex-1" 
-                    size="lg"
-                    disabled={loading}
-                  >
-                    {loading ? 'Creating Account...' : 'Create Account'}
-                  </Button>
-                </div>
-              </form>
-            )}
+                <Button type="submit" className="w-full" size="lg" disabled={loading}>
+                  {loading ? 'Creating Account...' : 'Create Account'}
+                </Button>
+            </form>
 
             <div className="mt-6 text-center">
               <p className="text-sm text-gray-600">

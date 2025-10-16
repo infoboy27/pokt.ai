@@ -80,8 +80,7 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.poktai-api.rule=Host(`pokt.ai`) && PathPrefix(`/api`)"
-      - "traefik.http.routers.poktai-api.entrypoints=websecure"
-      - "traefik.http.routers.poktai-api.tls=true"
+      - "traefik.http.routers.poktai-api.entrypoints=web"
       - "traefik.http.services.poktai-api.loadbalancer.server.port=3001"
       - "traefik.http.middlewares.poktai-api-strip.stripprefix.prefixes=/api"
       - "traefik.http.routers.poktai-api.middlewares=poktai-api-strip"
@@ -96,6 +95,7 @@ services:
       # Use Docker service name for API connection
       NEXT_PUBLIC_API_URL: http://api:3001/api
       AUTH0_BASE_URL: https://pokt.ai
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       PORT: 4000
       HOST: 0.0.0.0
     # Web service port only exposed in development
@@ -123,8 +123,7 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.poktai-web.rule=Host(`pokt.ai`)"
-      - "traefik.http.routers.poktai-web.entrypoints=websecure"
-      - "traefik.http.routers.poktai-web.tls=true"
+      - "traefik.http.routers.poktai-web.entrypoints=web"
       - "traefik.http.services.poktai-web.loadbalancer.server.port=4000"
       - "traefik.http.routers.poktai-web.priority=1"
 

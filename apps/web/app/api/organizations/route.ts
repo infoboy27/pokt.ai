@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { emailService } from '@/lib/email-service';
 
 const createOrganizationSchema = z.object({
   name: z.string().min(1, 'Organization name is required'),
@@ -25,7 +26,6 @@ export async function POST(request: NextRequest) {
     // 4. Send welcome email
     // 5. Set up billing account
     
-    // For now, simulate the process
     const organization = {
       id: `org_${Date.now()}`,
       name: validatedData.name,
@@ -47,8 +47,15 @@ export async function POST(request: NextRequest) {
       ]
     };
 
-    // Simulate processing time
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Send welcome email to the admin
+    const emailSent = await emailService.sendWelcomeEmail(
+      validatedData.adminEmail,
+      validatedData.adminName
+    );
+
+    if (!emailSent) {
+      console.warn('Failed to send welcome email, but organization was created');
+    }
 
     return NextResponse.json({
       success: true,

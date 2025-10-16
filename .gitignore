@@ -139,3 +139,6 @@ coverage/
 *.swo
 *~
 
+loadbalancerold/certs/
+apps/api/.env*
+apps/web/.env*

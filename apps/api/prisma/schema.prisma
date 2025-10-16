@@ -31,6 +31,9 @@ model User {
   password         String?  // Hashed password for local auth
   auth0Sub         String   @unique @map("auth0_sub")
   stripeCustomerId String?  @unique @map("stripe_customer_id")
+  verificationCode String?  @map("verification_code")
+  verificationCodeExpiresAt DateTime? @map("verification_code_expires_at")
+  isEmailVerified  Boolean  @default(false) @map("is_email_verified")
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
 

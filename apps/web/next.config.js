@@ -5,7 +5,6 @@ const nextConfig = {
     domains: ['localhost', 'pokt.ai'],
   },
   env: {
-    CUSTOM_KEY: process.env.CUSTOM_KEY,
     PORT: process.env.PORT || '4000',
   },
   // Allow requests from pokt.ai domain

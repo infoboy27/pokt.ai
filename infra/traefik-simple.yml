@@ -1,0 +1,47 @@
+http:
+  routers:
+    # Main web application
+    poktai-web:
+      rule: "Host(`pokt.ai`)"
+      service: poktai-web
+      entryPoints:
+        - web
+      priority: 1
+
+    # API routes
+    poktai-api:
+      rule: "Host(`pokt.ai`) && PathPrefix(`/api`)"
+      service: poktai-api
+      entryPoints:
+        - web
+      middlewares:
+        - poktai-api-strip
+      priority: 10
+
+  middlewares:
+    # Strip /api prefix for backend
+    poktai-api-strip:
+      stripPrefix:
+        prefixes:
+          - "/api"
+
+  services:
+    # Web application service
+    poktai-web:
+      loadBalancer:
+        servers:
+          - url: "http://infra_web_1:4000"
+        healthCheck:
+          path: "/"
+          interval: "30s"
+          timeout: "5s"
+
+    # API service
+    poktai-api:
+      loadBalancer:
+        servers:
+          - url: "http://infra_api_1:3001"
+        healthCheck:
+          path: "/"
+          interval: "30s"
+          timeout: "5s"
