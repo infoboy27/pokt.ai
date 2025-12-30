@@ -22,6 +22,7 @@ export default function SimpleEndpointsPage() {
         <pre className="bg-gray-100 p-3 rounded text-sm">
 {`fetch('/api/endpoints?orgId=org_current_user')
   .then(res => res.json())
+  .then(data => console.log(data))`}
         </pre>
       </div>
     </div>

@@ -1,11 +1,11 @@
 import { Controller, Get, UseGuards, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { NetworksService } from './networks.service';
-import { MockAuthGuard } from '../auth/mock-auth.guard';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @ApiTags('networks')
 @Controller('networks')
-@UseGuards(MockAuthGuard)
+@UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class NetworksController {
   constructor(private networksService: NetworksService) {}

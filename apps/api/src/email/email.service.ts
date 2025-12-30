@@ -1,19 +1,50 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const sgMail = require('@sendgrid/mail');
 
 @Injectable()
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
+  private readonly fromEmail: string;
 
-  constructor(private configService: ConfigService) {}
+  constructor(private readonly config: ConfigService) {
+    const apiKey = this.config.get<string>('SENDGRID_API_KEY');
+    this.fromEmail = this.config.get<string>('FROM_EMAIL') || this.config.get<string>('EMAIL_FROM') || 'noreply@pokt.ai';
+    if (apiKey && apiKey !== 'SG.your-sendgrid-api-key') {
+      try {
+        sgMail.setApiKey(apiKey);
+        this.logger.log('SendGrid API key configured successfully');
+      } catch (error) {
+        this.logger.warn('Failed to set SendGrid API key', error);
+      }
+    } else {
+      this.logger.warn('SENDGRID_API_KEY not set; email sending disabled');
+    }
+  }
+
+  private isEnabled(): boolean {
+    return !!this.config.get<string>('SENDGRID_API_KEY');
+  }
+
+  async send(to: string, subject: string, text: string, html?: string): Promise<void> {
+    if (!this.isEnabled()) {
+      this.logger.log(`[email-disabled] To: ${to} | ${subject}`);
+      return;
+    }
+    try {
+      await sgMail.send({ to, from: this.fromEmail, subject, text, html: html || text });
+    } catch (error) {
+      this.logger.error('Failed to send email', error as Error);
+    }
+  }
 
   async sendVerificationEmail(email: string, verificationCode: string): Promise<boolean> {
     try {
-      const sendGridApiKey = this.configService.get<string>('SENDGRID_API_KEY');
+      const sendGridApiKey = this.config.get<string>('SENDGRID_API_KEY');
       
       if (!sendGridApiKey || sendGridApiKey === 'SG.your-sendgrid-api-key') {
         this.logger.warn('SENDGRID_API_KEY not configured, using development fallback');
-        // In development, log the actual verification code that was generated
         this.logger.log(`📧 VERIFICATION EMAIL for ${email}:`);
         this.logger.log(`   Code: ${verificationCode} (check console - email not sent)`);
         this.logger.log(`   Please use this code to verify your account`);
@@ -21,46 +52,26 @@ export class EmailService {
         return true;
       }
 
-      // For now, we'll use a simple fetch to SendGrid API
-      // In production, you'd use the SendGrid SDK
-      const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${sendGridApiKey}`,
-          'Content-Type': 'application/json',
+      const msg = {
+        to: email,
+        from: {
+          email: this.config.get<string>('FROM_EMAIL') || 'noreply@pokt.ai',
+          name: 'pokt.ai',
         },
-        body: JSON.stringify({
-          personalizations: [
-            {
-              to: [{ email }],
-              subject: 'Verify your pokt.ai account',
-            },
-          ],
-          from: {
-            email: this.configService.get<string>('FROM_EMAIL') || 'noreply@pokt.ai',
-            name: 'pokt.ai',
-          },
-          content: [
-            {
-              type: 'text/html',
-              value: this.getVerificationEmailTemplate(verificationCode),
-            },
-          ],
-        }),
-      });
+        subject: 'Verify your pokt.ai account',
+        html: this.getVerificationEmailTemplate(verificationCode),
+      };
 
-      if (response.ok) {
-        this.logger.log(`✅ Verification email sent to ${email}`);
-        this.logger.log(`📧 VERIFICATION CODE: ${verificationCode}`);
-        this.logger.log(`   Use this code to verify your account`);
-        return true;
-      } else {
-        this.logger.error(`Failed to send email to ${email}: ${response.statusText}`);
-        this.logger.error(`Verification code for ${email}: ${verificationCode} (email failed to send)`);
-        return false;
-      }
+      await sgMail.send(msg);
+      this.logger.log(`✅ Verification email sent to ${email}`);
+      this.logger.log(`📧 VERIFICATION CODE: ${verificationCode}`);
+      this.logger.log(`   Use this code to verify your account`);
+      return true;
     } catch (error) {
       this.logger.error(`Error sending verification email to ${email}:`, error);
+      if ((error as any).response) {
+        this.logger.error(`SendGrid Error: ${JSON.stringify((error as any).response.body)}`);
+      }
       return false;
     }
   }
@@ -97,7 +108,7 @@ export class EmailService {
         
         <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
           <p style="color: #666; font-size: 12px;">
-            © 2024 pokt.ai. All rights reserved.
+            © ${new Date().getFullYear()} pokt.ai. All rights reserved.
           </p>
         </div>
       </body>

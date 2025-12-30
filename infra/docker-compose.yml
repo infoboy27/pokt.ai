@@ -89,6 +89,8 @@ services:
     build:
       context: ..
       dockerfile: apps/web/Dockerfile
+    deploy:
+      replicas: 4  # Scale to 4 instances for better throughput
     env_file:
       - .env
     environment:
@@ -98,6 +100,35 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       PORT: 4000
       HOST: 0.0.0.0
+      # PATH Gateway Configuration (disabled when WeaversNodes Gateway is enabled)
+      USE_LOCAL_NODE: 'false'
+      LOCAL_GATEWAY_URL: http://host.docker.internal:3069
+      # Global fallback app address (used if chain-specific not set)
+      PATH_GATEWAY_APP_ADDRESS: pokt1q89a5tyhaq5xh49ec5n2wqn5zhynw6fmve06sv
+      # Per-chain default app addresses (can be overridden per-network in database)
+      # PATH Gateway app addresses (legacy)
+      ETH_APP_ADDRESS: pokt1q89a5tyhaq5xh49ec5n2wqn5zhynw6fmve06sv
+      BSC_APP_ADDRESS: pokt17uus8phtheqhz9dv5dlcmv0y7s95d3fn59xg5w
+      KAVA_APP_ADDRESS: pokt1u4lvv3z5yla272vdqv7grp37ltaz7rmkzdkksp
+      TEXT_TO_TEXT_APP_ADDRESS: pokt14ng2mx2uux8cg8yr0dfp3kkna9apntkg6mtxpw
+      # WeaversNodes Gateway chain-specific app addresses
+      FANTOM_APP_ADDRESS: "pokt14fnfvne4mh0m8lh63nremuxmdl5qp2kxtljkfs"
+      OPT_APP_ADDRESS: "pokt1hcn484sc9w3xqdwajv7cz06wys3r4az999ds36"
+      OASYS_APP_ADDRESS: "pokt1nnkjgpzzuuadyexuepuewj97p7s8hcdqapamgt"
+      # Load testing optimizations (disable for production billing)
+      DISABLE_RATE_LIMIT: 'true'
+      DISABLE_IP_RATE_LIMIT: 'true'
+      DISABLE_USAGE_LOGGING: 'false'
+      DISABLE_PAYMENT_CHECK: 'true'
+      CACHE_ENDPOINT_LOOKUPS: 'true'
+      DB_POOL_MAX: '500'
+      RPC_TIMEOUT_MS: '45000'
+      # PATH Gateway load balancing
+      PATH_GATEWAY_BASE: 'http://host.docker.internal'
+      PATH_GATEWAY_INSTANCES: 'http://host.docker.internal:3069,http://host.docker.internal:3070,http://host.docker.internal:3071,http://host.docker.internal:3072,http://host.docker.internal:3073,http://host.docker.internal:3074,http://host.docker.internal:3075,http://host.docker.internal:3076,http://host.docker.internal:3077,http://host.docker.internal:3078'
+      # WeaversNodes Gateway Configuration
+      USE_WEAVERSNODES_GATEWAY: 'true'
+      WEAVERSNODES_GATEWAY_URL: 'https://gateway.weaversnodes.org/v1'
     # Web service port only exposed in development
     ports:
       - "${WEB_PORT:-3005}:4000"

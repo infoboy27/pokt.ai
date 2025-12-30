@@ -13,16 +13,58 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
     
-    // Get user's organization ID
-    const { organizationQueries } = await import('@/lib/database');
-    const organizations = await organizationQueries.findByUserId(userId);
-    const userOrgId = organizations?.[0]?.id;
+    // Get or create user's single organization (1:1 relationship)
+    const { userQueries, organizationQueries } = await import('@/lib/database');
     
-    if (!userOrgId) {
-      return NextResponse.json({ error: 'User has no organization' }, { status: 400 });
+    // Verify user exists, create if needed
+    let user = await userQueries.findById(userId);
+    if (!user) {
+      console.log(`[CREATE-ENDPOINT] User ${userId} not found, creating user...`);
+      try {
+        // Create user with a default password (they can change it later)
+        const { createHash } = await import('crypto');
+        const hashedPassword = createHash('sha256').update(`${userId}_default`).digest('hex');
+        user = await userQueries.create({
+          id: userId, // Use the user_id from cookie as the user ID
+          email: `${userId}@pokt.ai`,
+          name: userId,
+          password: hashedPassword,
+        });
+        console.log(`[CREATE-ENDPOINT] Created user ${user.id}`);
+      } catch (userError: any) {
+        console.error('[CREATE-ENDPOINT] Failed to create user:', userError);
+        return NextResponse.json(
+          { error: `Failed to create user: ${userError.message || 'Unknown error'}` },
+          { status: 500 }
+        );
+      }
     }
     
-    const { name, chainId, rateLimit = 1000, organizationId = userOrgId } = body;
+    // Get user's single organization (each user has exactly one organization)
+    let organizations = await organizationQueries.findByUserId(userId);
+    let userOrgId = organizations?.[0]?.id;
+    
+    // Create organization if user doesn't have one (1:1 relationship)
+    if (!userOrgId) {
+      console.log(`[CREATE-ENDPOINT] Creating single organization for user ${userId}...`);
+      try {
+        const userOrg = await organizationQueries.create({
+          name: `${user.name || userId}'s Organization`,
+          plan: 'free',
+          userId: userId,
+        });
+        userOrgId = userOrg.id;
+        console.log(`[CREATE-ENDPOINT] Created organization ${userOrgId} for user ${userId}`);
+      } catch (orgError: any) {
+        console.error('[CREATE-ENDPOINT] Failed to create organization:', orgError);
+        return NextResponse.json(
+          { error: `Failed to create organization: ${orgError.message || 'Unknown error'}` },
+          { status: 500 }
+        );
+      }
+    }
+    
+    const { name, chainId, rateLimit = 1000, organizationId = userOrgId, pathAppAddress } = body;
 
     // Validate and set default name if empty, ensure uniqueness
     const baseName = name && name.trim() ? name.trim() : `Endpoint`;
@@ -101,15 +143,22 @@ export async function POST(request: NextRequest) {
     }
 
     // Step 4: Create endpoint in pokt.ai system using PostgreSQL
-    const endpoint = await endpointQueries.create({
-      name: endpointName,
-      chainId: validChainId,
-      organizationId,
-      customerId,
-      rpcUrl: `https://pokt.ai/api/gateway?endpoint=${endpointName.replace(/\s+/g, '_').toLowerCase()}`,
-      apiKey,
-      rateLimit,
-    });
+    let endpoint;
+    try {
+      endpoint = await endpointQueries.create({
+        name: endpointName,
+        chainId: validChainId,
+        organizationId,
+        customerId,
+        rpcUrl: `https://pokt.ai/api/gateway?endpoint=${endpointName.replace(/\s+/g, '_').toLowerCase()}`,
+        apiKey,
+        rateLimit,
+        pathAppAddress, // Optional: Per-network PATH gateway app address (for multi-tenant support)
+      });
+    } catch (dbError: any) {
+      console.error('[CREATE-ENDPOINT] Database error:', dbError);
+      throw new Error(`Failed to create endpoint in database: ${dbError.message || 'Unknown database error'}`);
+    }
 
     // Update the endpoint URL to use the actual database ID
     const actualEndpointId = endpoint.id;
@@ -163,8 +212,13 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    console.error('[CREATE-ENDPOINT] Error:', errorMessage, errorStack);
     return NextResponse.json(
-      { error: `Failed to create production endpoint: ${errorMessage}` },
+      { 
+        error: `Failed to create production endpoint: ${errorMessage}`,
+        details: process.env.NODE_ENV === 'development' ? errorStack : undefined
+      },
       { status: 500 }
     );
   }

@@ -1,13 +1,7 @@
 // JWT token management
-export const MOCK_TOKEN = process.env.NODE_ENV === 'development' ? 'mock-jwt-token-for-testing' : null;
-
 export function getAuthToken(): string | null {
   if (typeof window === 'undefined') return null;
-  const token = localStorage.getItem('auth_token');
-  if (!token && process.env.NODE_ENV === 'development') {
-    return MOCK_TOKEN;
-  }
-  return token;
+  return localStorage.getItem('auth_token');
 }
 
 export function setAuthToken(token: string): void {

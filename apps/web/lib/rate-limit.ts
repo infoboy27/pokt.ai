@@ -13,7 +13,43 @@ interface RateLimitStore {
   };
 }
 
-// In-memory store (use Redis in production)
+// Redis client (lazy initialization)
+let redisClient: any = null;
+let redisInitialized = false;
+
+async function getRedisClient() {
+  if (redisInitialized) {
+    return redisClient;
+  }
+
+  const redisUrl = process.env.REDIS_URL;
+  if (!redisUrl) {
+    redisInitialized = true;
+    return null;
+  }
+
+  try {
+    // Dynamic import to avoid breaking if redis is not installed
+    const { createClient } = await import('redis');
+    redisClient = createClient({ url: redisUrl });
+    
+    redisClient.on('error', (err: Error) => {
+      console.error('Redis Client Error:', err);
+      redisClient = null;
+    });
+
+    await redisClient.connect();
+    redisInitialized = true;
+    console.log('Redis connected for rate limiting');
+    return redisClient;
+  } catch (error) {
+    console.warn('Redis not available, falling back to in-memory rate limiting:', error);
+    redisInitialized = true;
+    return null;
+  }
+}
+
+// In-memory store (fallback when Redis is not available)
 const store: RateLimitStore = {};
 
 export class RateLimiter {
@@ -32,6 +68,54 @@ export class RateLimiter {
       ? this.config.keyGenerator(request)
       : this.getDefaultKey(request);
 
+    // Try Redis first, fallback to memory
+    const redis = await getRedisClient();
+    
+    if (redis) {
+      return this.checkLimitRedis(redis, key);
+    } else {
+      return this.checkLimitMemory(key);
+    }
+  }
+
+  private async checkLimitRedis(redis: any, key: string): Promise<{
+    allowed: boolean;
+    remaining: number;
+    resetTime: number;
+  }> {
+    const now = Date.now();
+    const windowSeconds = Math.ceil(this.config.windowMs / 1000);
+    const redisKey = `rate_limit:${key}:${this.config.windowMs}`;
+    
+    try {
+      // Use Redis INCR with EXPIRE for sliding window
+      const count = await redis.incr(redisKey);
+      
+      if (count === 1) {
+        // First request in window, set expiration
+        await redis.expire(redisKey, windowSeconds);
+      }
+      
+      const resetTime = now + this.config.windowMs;
+      const remaining = Math.max(0, this.config.maxRequests - count);
+      const allowed = count <= this.config.maxRequests;
+      
+      return {
+        allowed,
+        remaining,
+        resetTime,
+      };
+    } catch (error) {
+      console.error('Redis rate limit error, falling back to memory:', error);
+      return this.checkLimitMemory(key);
+    }
+  }
+
+  private checkLimitMemory(key: string): {
+    allowed: boolean;
+    remaining: number;
+    resetTime: number;
+  } {
     const now = Date.now();
     const windowStart = now - this.config.windowMs;
 
@@ -75,9 +159,19 @@ export class RateLimiter {
   }
 
   private getDefaultKey(request: NextRequest): string {
+    // For gateway, use endpoint ID from query param or header for better rate limiting
+    const endpointId = request.nextUrl.searchParams.get('endpoint') || 
+                       request.headers.get('X-Endpoint-ID') || 
+                       'default';
+    
+    // For load testing: if DISABLE_IP_RATE_LIMIT is set, don't include IP in key
+    // This allows load testing from a single machine
+    if (process.env.DISABLE_IP_RATE_LIMIT === 'true') {
+      return `gateway:${endpointId}`;
+    }
+    
     const ip = request.ip || request.headers.get('x-forwarded-for') || 'unknown';
-    const userAgent = request.headers.get('user-agent') || '';
-    return `${ip}-${userAgent}`;
+    return `gateway:${endpointId}:${ip}`;
   }
 
   private cleanup(windowStart: number): void {
@@ -92,17 +186,17 @@ export class RateLimiter {
 // Predefined rate limiters
 export const apiRateLimit = new RateLimiter({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  maxRequests: 100, // 100 requests per 15 minutes
+  maxRequests: 1000, // 1000 requests per 15 minutes (increased from 100)
 });
 
 export const authRateLimit = new RateLimiter({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  maxRequests: 5, // 5 login attempts per 15 minutes
+  maxRequests: 20, // 20 login attempts per 15 minutes (increased from 5)
 });
 
 export const gatewayRateLimit = new RateLimiter({
-  windowMs: 60 * 1000, // 1 minute
-  maxRequests: 60, // 60 requests per minute
+  windowMs: 1000, // 1 second window for better granularity
+  maxRequests: 10000, // 10,000 requests per second (2x buffer for 5K RPS load testing)
 });
 
 // Rate limit middleware

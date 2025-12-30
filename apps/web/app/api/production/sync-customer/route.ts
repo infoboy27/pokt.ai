@@ -6,6 +6,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { customer_id, customer_name, organization_id, rate_limit = 1000 } = body;
 
+    console.log('[SYNC-CUSTOMER] Request:', {
       customer_id,
       customer_name,
       organization_id,

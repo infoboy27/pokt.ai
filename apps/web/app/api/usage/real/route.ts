@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { calculateCost, getCurrentRate } from '@/lib/pricing';
 
 // In-memory usage tracking for testing
 // In production, this would be stored in the database
@@ -76,8 +77,8 @@ export async function GET(request: NextRequest) {
         totalRequests,
         avgLatency,
         activeEndpoints: relevantData.length,
-        costPerRelay: 0.0001,
-        estimatedCost: totalRelays * 0.0001,
+        costPerRelay: getCurrentRate(),
+        estimatedCost: calculateCost(totalRelays),
       },
       methodBreakdown,
       recentActivity,

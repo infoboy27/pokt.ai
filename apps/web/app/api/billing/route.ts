@@ -1,89 +1,83 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { endpointQueries, usageQueries } from '@/lib/database';
 import { emailService } from '@/lib/email-service';
+import { calculateCost, getCurrentRate } from '@/lib/pricing';
 
 // GET /api/billing - Get billing information
 export async function GET(request: NextRequest) {
   try {
-    const orgId = request.headers.get('X-Organization-ID') || 'org-1';
-
-    // Get all endpoints for this organization
-    const endpoints = await endpointQueries.findAll(orgId);
+    // Get user ID from cookies
+    const userId = request.cookies.get('user_id')?.value;
     
-    // Calculate total usage and costs from real data
-    let totalRequests = 0;
-    let totalCost = 0;
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'Not authenticated' },
+        { status: 401 }
+      );
+    }
+
+    // Get user's organization
+    const { query, organizationQueries } = await import('@/lib/database');
+    const userOrgs = await organizationQueries.findByUserId(userId);
+    
+    if (!userOrgs || userOrgs.length === 0) {
+      return NextResponse.json(
+        { error: 'No organization found for user' },
+        { status: 404 }
+      );
+    }
+    
+    const orgId = userOrgs[0].id; // User's organization
+    console.log('[BILLING] Fetching billing for user:', userId, 'org:', orgId);
+
+    // Get all endpoints INCLUDING DELETED ones (for billing purposes) - FILTERED by orgId
+    const endpoints = await endpointQueries.findAllForBilling(orgId);
+    
+    console.log('[BILLING] Found', endpoints.length, 'endpoints for orgId:', orgId);
+    
+    // Fetch real usage/cost summary from backend
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
     let currentMonthRequests = 0;
-    
-    // Get current month usage
-    const currentDate = new Date();
-    const currentMonth = currentDate.getMonth();
-    const currentYear = currentDate.getFullYear();
-    
-    for (const endpoint of endpoints) {
-      try {
-        const usageData = await usageQueries.getUsageByEndpointId(endpoint.id);
-        if (usageData) {
-          totalRequests += usageData.totalRelays || 0;
-          currentMonthRequests += usageData.totalRelays || 0;
-          // Calculate cost: $0.0001 per request
-          totalCost += (usageData.totalRelays || 0) * 0.0001;
-        }
-      } catch (error) {
-        console.error(`Error fetching usage for endpoint ${endpoint.id}:`, error);
+    let totalMonthlyCost = 0;
+    let usageHistory: Array<{ month: string; requests: number; cost: number }> = [];
+    let balanceDue = 0;
+    let lastPaymentDate: string | null = null;
+    let nextBillingDateIso = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).toISOString();
+
+    let currentRate = 0;
+    try {
+      const summaryResp = await fetch(`${backendUrl}/billing/invoice/org/${orgId}/summary`, { cache: 'no-store' });
+      if (summaryResp.ok) {
+        const s = await summaryResp.json();
+        currentMonthRequests = s.currentMonthRequests || 0;
+        totalMonthlyCost = s.currentMonthCost || 0;
+        usageHistory = s.usageHistory || [];
+        balanceDue = s.balanceDue || 0;
+        lastPaymentDate = s.lastPaymentDate ? new Date(s.lastPaymentDate).toISOString() : null;
+        nextBillingDateIso = s.nextBillingDate ? new Date(s.nextBillingDate).toISOString() : nextBillingDateIso;
+        currentRate = s.ratePerRequest || 0;
       }
+    } catch (e) {
+      console.warn('[BILLING] Failed to fetch org summary; falling back to zeros');
     }
 
-    // Pay-as-you-go pricing model
-    const totalMonthlyCost = totalCost; // No base plan cost, just pay for usage
-    const overageCost = 0; // No overage in pay-as-you-go model
-
-    // Generate real usage history from database
-    const usageHistory = [];
-    const currentDateObj = new Date();
-    
-    for (let i = 3; i >= 0; i--) {
-      const date = new Date(currentDateObj);
-      date.setMonth(date.getMonth() - i);
-      
-      // Calculate real usage for each month
-      let monthRequests = 0;
-      let monthCost = 0;
-      
-      // For current month, use real data
-      if (i === 0) {
-        monthRequests = currentMonthRequests;
-        monthCost = totalMonthlyCost;
-      } else {
-      // For previous months, generate realistic data based on current usage
-      const variation = 0.7 + Math.random() * 0.6; // ±30% variation
-      monthRequests = Math.floor(currentMonthRequests * variation);
-      monthCost = monthRequests * 0.0001; // Pay-as-you-go: no base cost
+    // Fetch real invoices from backend (fallback to empty if unavailable)
+    let invoices: Array<{ id: string; date: string; amount: number; status: 'paid' | 'pending' | 'failed'; downloadUrl: string; }>= [];
+    try {
+      const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+      const resp = await fetch(`${backendUrl}/billing/invoice/org/${orgId}`, { cache: 'no-store' });
+      if (resp.ok) {
+        const data = await resp.json();
+        invoices = (data || []).map((inv: any) => ({
+          id: inv.id,
+          date: new Date(inv.periodEnd || inv.createdAt).toISOString().split('T')[0],
+          amount: Number((inv.amount / 100).toFixed(2)),
+          status: (inv.status === 'paid' ? 'paid' : inv.status === 'open' ? 'pending' : 'failed') as 'paid' | 'pending' | 'failed',
+          downloadUrl: `/api/billing/invoice/${inv.id}`,
+        }));
       }
-      
-      usageHistory.push({
-        month: date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-        requests: monthRequests,
-        cost: monthCost
-      });
-    }
-
-    // Generate real invoices based on usage history
-    const invoices = [];
-    for (let i = 0; i < 3; i++) {
-      const invoiceDate = new Date();
-      invoiceDate.setMonth(invoiceDate.getMonth() - i);
-      
-      const invoiceAmount = usageHistory[i]?.cost || totalMonthlyCost;
-      const invoiceId = `INV-${invoiceDate.getFullYear()}-${String(i + 1).padStart(3, '0')}`;
-      
-      invoices.push({
-        id: invoiceId,
-        date: invoiceDate.toISOString().split('T')[0],
-        amount: invoiceAmount,
-        status: 'paid' as const,
-        downloadUrl: `/api/billing/invoice/${invoiceId}`
-      });
+    } catch (e) {
+      console.warn('[BILLING] Failed to fetch real invoices, falling back to none');
     }
 
     // Determine payment method based on user preferences
@@ -107,33 +101,25 @@ export async function GET(request: NextRequest) {
       currentPlan: {
         name: 'Pay-as-you-go',
         price: totalMonthlyCost,
-        features: [
-          'Pay only for what you use',
-          'No monthly commitments',
-          'No setup fees',
-          '99.9% SLA guarantee',
-          'Priority support',
-          'Advanced analytics',
-          'Unlimited endpoints',
-          'Webhook notifications'
-        ],
+        features: [],
         usage: {
           requests: currentMonthRequests,
-          limit: 0, // No limits in pay-as-you-go
-          percentage: 0 // No percentage calculation needed
+          limit: 0,
+          percentage: 0
         }
       },
       paymentMethods,
       invoices,
       usageHistory,
       costBreakdown: {
-        basePlan: 0, // No base plan cost in pay-as-you-go
-        overage: 0, // No overage in pay-as-you-go
+        basePlan: 0,
+        overage: 0,
         total: totalMonthlyCost
       },
-      nextBillingDate: new Date(currentDateObj.getFullYear(), currentDateObj.getMonth() + 1, 1).toISOString().split('T')[0],
+      nextBillingDate: nextBillingDateIso.split('T')[0],
       totalEndpoints: endpoints.length,
-      activeEndpoints: endpoints.filter(ep => ep.is_active).length
+      activeEndpoints: endpoints.filter(ep => ep.is_active).length,
+      currentRate,
     };
 
     return NextResponse.json(billingData);

@@ -81,22 +81,22 @@ export default function LoginPage() {
       </div>
 
       {/* Login Form */}
-      <div className="relative z-10 w-full max-w-md">
+      <div className="relative z-10 w-full max-w-md px-4">
         <Card className="shadow-xl border-0">
-          <CardHeader className="text-center pb-6">
+          <CardHeader className="text-center pb-6 px-6 sm:px-8">
             <div className="flex items-center justify-center space-x-2 mb-4">
               <span className="text-2xl font-bold" style={{ color: '#1E3A8A' }}>
                 pokt.ai
               </span>
             </div>
-            <CardTitle className="text-2xl font-bold text-gray-900">
+            <CardTitle className="text-xl sm:text-2xl font-bold text-gray-900">
               Welcome Back
             </CardTitle>
-            <p className="text-gray-600">
+            <p className="text-sm sm:text-base text-gray-600">
               Sign in to your account to continue
             </p>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-6 sm:px-8">
             <form onSubmit={handleSubmit} className="space-y-4">
               {success && (
                 <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-md text-sm">
@@ -148,7 +148,7 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div className="flex items-center space-x-2">
                   <input
                     id="remember"

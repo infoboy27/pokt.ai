@@ -21,6 +21,8 @@ export default function VerifyEmailPage() {
   const [error, setError] = useState('');
   const [email, setEmail] = useState('');
   const [resending, setResending] = useState(false);
+  const [devCode, setDevCode] = useState<string | null>(null);
+  const [fetchingCode, setFetchingCode] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -101,6 +103,38 @@ export default function VerifyEmailPage() {
     }
   };
 
+  const handleGetDevCode = async () => {
+    setFetchingCode(true);
+    setError('');
+
+    try {
+      const response = await fetch('/api/auth/get-verification-code', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to get verification code');
+      }
+
+      const data = await response.json();
+      if (data.verificationCode) {
+        setDevCode(data.verificationCode);
+        setVerificationCode(data.verificationCode);
+      } else {
+        throw new Error('No verification code found');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to get verification code. Please try again.');
+    } finally {
+      setFetchingCode(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
@@ -169,25 +203,62 @@ export default function VerifyEmailPage() {
               </Button>
             </form>
 
-            <div className="mt-6 text-center">
-              <p className="text-sm text-gray-600 mb-2">
-                Didn't receive the code?
-              </p>
-              <Button 
-                variant="outline" 
-                onClick={handleResendCode}
-                disabled={resending}
-                className="w-full"
-              >
-                {resending ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                    Resending...
-                  </>
-                ) : (
-                  'Resend Code'
-                )}
-              </Button>
+            <div className="mt-6 space-y-3">
+              {devCode && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <p className="text-sm font-semibold text-yellow-800 mb-2">
+                    Development Mode - Verification Code:
+                  </p>
+                  <div className="text-2xl font-mono font-bold text-yellow-900 text-center">
+                    {devCode}
+                  </div>
+                  <p className="text-xs text-yellow-700 mt-2 text-center">
+                    (Email sending not configured - code retrieved from database)
+                  </p>
+                </div>
+              )}
+              
+              <div className="text-center">
+                <p className="text-sm text-gray-600 mb-2">
+                  Didn't receive the code?
+                </p>
+                <div className="flex flex-col gap-2">
+                  <Button 
+                    variant="outline" 
+                    onClick={handleResendCode}
+                    disabled={resending}
+                    className="w-full"
+                  >
+                    {resending ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                        Resending...
+                      </>
+                    ) : (
+                      'Resend Code'
+                    )}
+                  </Button>
+                  
+                  <Button 
+                    variant="ghost" 
+                    onClick={handleGetDevCode}
+                    disabled={fetchingCode}
+                    className="w-full text-xs"
+                  >
+                    {fetchingCode ? (
+                      <>
+                        <RefreshCw className="w-3 h-3 mr-2 animate-spin" />
+                        Fetching...
+                      </>
+                    ) : (
+                      'Get Code (Dev Mode)'
+                    )}
+                  </Button>
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  If emails aren't configured, use "Get Code" to retrieve from database
+                </p>
+              </div>
             </div>
 
             <div className="mt-6 text-center">

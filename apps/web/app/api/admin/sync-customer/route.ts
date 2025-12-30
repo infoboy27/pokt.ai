@@ -3,9 +3,10 @@ import { NextRequest, NextResponse } from 'next/server';
 // Admin endpoint to sync customer data with your RPC provider
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { customer_id, api_keys, rate_limits } = body;
-
+        const body = await request.json();
+        const { customer_id, api_keys, rate_limits } = body;
+    
+    console.log('[ADMIN-SYNC] Request:', {
       customer_id,
       api_keys: api_keys?.length || 0,
       rate_limits

@@ -97,16 +97,17 @@ model Endpoint {
 }
 
 model Network {
-  id         String   @id @default(cuid())
-  code       String   // e.g., "eth", "bsc"
-  chainId    Int?     @map("chain_id")
-  rpcUrl     String   @map("rpc_url")
-  wsUrl      String?  @map("ws_url")
-  isTestnet  Boolean  @default(false) @map("is_testnet")
-  isEnabled  Boolean  @default(true) @map("is_enabled")
-  endpointId String   @map("endpoint_id")
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
+  id             String   @id @default(cuid())
+  code           String   // e.g., "eth", "bsc"
+  chainId        Int?     @map("chain_id")
+  rpcUrl         String   @map("rpc_url")
+  wsUrl          String?  @map("ws_url")
+  pathAppAddress String?  @map("path_app_address") // Optional: Per-network PATH gateway app address (for multi-tenant support)
+  isTestnet      Boolean  @default(false) @map("is_testnet")
+  isEnabled      Boolean  @default(true) @map("is_enabled")
+  endpointId     String   @map("endpoint_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
   // Relations
   endpoint Endpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
@@ -153,6 +154,8 @@ model Usage {
 
   @@unique([apiKeyId, tsMinute])
   @@index([apiKeyId, networkId, tsMinute])
+  @@index([apiKeyId, createdAt])
+  @@index([tsMinute])
   @@map("usage")
 }
 

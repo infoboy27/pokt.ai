@@ -1,17 +1,61 @@
-import { Controller, Post, Get, Body, UseGuards, Request } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { Controller, Post, Get, Body, UseGuards, Request, ConflictException } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiProperty } from '@nestjs/swagger';
+import { IsEmail, IsString, IsOptional, MinLength } from 'class-validator';
 import { AuthService } from './auth.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { MockAuthGuard } from './mock-auth.guard';
+import { JwtAuthGuard } from './jwt-auth.guard';
 import { EmailService } from '../email/email.service';
 import * as bcrypt from 'bcryptjs';
 
 class RegisterUserDto {
+  @ApiProperty({ description: 'User full name', example: 'John Doe' })
+  @IsString()
   name: string;
+
+  @ApiProperty({ description: 'User email address', example: 'user@example.com' })
+  @IsEmail()
   email: string;
+
+  @ApiProperty({ description: 'User password (min 6 characters)', example: 'SecurePass123' })
+  @IsString()
+  @MinLength(6)
   password: string;
+
+  @ApiProperty({ description: 'Company name', example: 'My Company', required: false })
+  @IsOptional()
+  @IsString()
   company?: string;
+
+  @ApiProperty({ description: 'Subscription plan', example: 'pro', required: false })
+  @IsOptional()
+  @IsString()
   plan?: string;
+}
+
+class LoginDto {
+  @ApiProperty({ description: 'User email', example: 'user@example.com' })
+  @IsEmail()
+  email: string;
+
+  @ApiProperty({ description: 'User password', example: 'SecurePass123' })
+  @IsString()
+  password: string;
+}
+
+class VerifyEmailDto {
+  @ApiProperty({ description: 'User email', example: 'user@example.com' })
+  @IsEmail()
+  email: string;
+
+  @ApiProperty({ description: '6-digit verification code', example: '123456' })
+  @IsString()
+  code: string;
+}
+
+class ResendVerificationDto {
+  @ApiProperty({ description: 'User email', example: 'user@example.com' })
+  @IsEmail()
+  email: string;
 }
 
 @ApiTags('auth')
@@ -84,6 +128,12 @@ export class AuthController {
     } catch (error) {
       console.error('Error registering user:', error);
       console.error('Error details:', JSON.stringify(error, null, 2));
+      
+      // Handle Prisma unique constraint error (duplicate email)
+      if (error.code === 'P2002' && error.meta?.target?.includes('email')) {
+        throw new ConflictException('Email already exists. Please use a different email or login.');
+      }
+      
       throw new Error(`Failed to register user: ${error.message}`);
     }
   }
@@ -92,7 +142,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Verify email with code' })
   @ApiResponse({ status: 200, description: 'Email verified successfully' })
   @ApiResponse({ status: 400, description: 'Invalid verification code' })
-  async verifyEmail(@Body() body: { email: string; code: string }) {
+  async verifyEmail(@Body() body: VerifyEmailDto) {
     try {
       const user = await this.prisma.user.findUnique({
         where: { email: body.email },
@@ -161,7 +211,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Resend verification code' })
   @ApiResponse({ status: 200, description: 'Verification code sent successfully' })
   @ApiResponse({ status: 400, description: 'Bad request' })
-  async resendVerification(@Body() body: { email: string }) {
+  async resendVerification(@Body() body: ResendVerificationDto) {
     try {
       const user = await this.prisma.user.findUnique({
         where: { email: body.email },
@@ -348,7 +398,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Login user' })
   @ApiResponse({ status: 200, description: 'Login successful' })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
-  async login(@Body() loginDto: { email: string; password: string }) {
+  async login(@Body() loginDto: LoginDto) {
     try {
       const user = await this.prisma.user.findUnique({
         where: { email: loginDto.email },

@@ -17,7 +17,7 @@ import {
   ApiBody 
 } from '@nestjs/swagger';
 import { EndpointsService } from './endpoints.service';
-import { MockAuthGuard } from '../auth/mock-auth.guard';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 class CreateEndpointDto {
   name: string;
@@ -27,7 +27,7 @@ class CreateEndpointDto {
 
 @ApiTags('endpoints')
 @Controller('endpoints')
-@UseGuards(MockAuthGuard)
+@UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class EndpointsController {
   constructor(private endpointsService: EndpointsService) {}

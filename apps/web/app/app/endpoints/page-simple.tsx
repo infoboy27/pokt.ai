@@ -218,6 +218,7 @@ export default function SimpleEndpointsPage() {
           <Button onClick={loadEndpoints} variant="outline" className="bg-white">
             🔥 Load Endpoints
           </Button>
+          <Button onClick={() => console.log({ loading, endpoints })} variant="outline" className="bg-white">
             🔍 Check State
           </Button>
         </div>

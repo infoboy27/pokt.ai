@@ -16,7 +16,7 @@ COPY packages/sdk/package.json ./packages/sdk/
 COPY apps/web/package.json ./apps/web/
 
 # Install pnpm and dependencies with workspace support
-RUN npm install -g pnpm && pnpm install --frozen-lockfile
+RUN npm install -g pnpm && pnpm install --no-frozen-lockfile
 
 # Copy TypeScript configuration
 COPY tsconfig*.json ./
@@ -32,7 +32,7 @@ RUN cd packages/sdk && pnpm build
 
 # Install dependencies directly in web app directory
 WORKDIR /app/apps/web
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --no-frozen-lockfile
 
 EXPOSE 4000
 

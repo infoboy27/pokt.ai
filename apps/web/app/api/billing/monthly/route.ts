@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
       orgId,
       usage: {
         totalRelays: usage.totalRelays,
-        costPerRelay: 0.0001, // $0.0001 per relay
+        costPerRelay: 0.000001, // $1 per 1,000,000 relays
         totalCostCents: usage.totalCost,
         totalCostDollars: usage.totalCost / 100,
       },

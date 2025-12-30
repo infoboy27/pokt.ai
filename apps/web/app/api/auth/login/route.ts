@@ -72,12 +72,22 @@ export async function POST(request: NextRequest) {
       });
       
       // Store user ID in cookie for session management
-      response.cookies.set('user_id', user.id.toString(), {
+      // Set cookie with proper domain and path for production
+      const cookieOptions: any = {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
+        sameSite: 'lax' as const,
         maxAge: 60 * 60 * 24 * 7, // 7 days
-      });
+        path: '/', // Set cookie for entire domain
+      };
+      
+      // In production, set domain if needed (only if using a subdomain)
+      // Don't set domain for main domain (pokt.ai) as it may cause issues
+      if (process.env.NODE_ENV === 'production' && process.env.COOKIE_DOMAIN) {
+        cookieOptions.domain = process.env.COOKIE_DOMAIN;
+      }
+      
+      response.cookies.set('user_id', user.id.toString(), cookieOptions);
       
       // Add CORS headers
       response.headers.set('Access-Control-Allow-Origin', '*');
@@ -101,8 +111,17 @@ export async function POST(request: NextRequest) {
     return errorResponse;
 
   } catch (error) {
+    // Log the actual error for debugging
+    console.error('[LOGIN] Error details:', error);
+    console.error('[LOGIN] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    console.error('[LOGIN] Error message:', error instanceof Error ? error.message : String(error));
+    
     const errorResponse = NextResponse.json(
-      { success: false, message: 'Login failed. Please try again.' },
+      { 
+        success: false, 
+        message: 'Login failed. Please try again.',
+        error: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.message : String(error)) : undefined
+      },
       { status: 500 }
     );
     

@@ -112,7 +112,7 @@ export default function DashboardClient() {
           <div className="p-6 pt-0">
             <div className="text-2xl font-bold">{formatNumber(stats?.totalRelays || 0)}</div>
             <p className="text-xs text-muted-foreground">
-              {stats?.relayChangePercent > 0 ? '+' : ''}{stats?.relayChangePercent || 0}% from last month
+              {stats?.relayChangePercent && stats.relayChangePercent > 0 ? '+' : ''}{stats?.relayChangePercent || 0}% from last month
             </p>
           </div>
         </div>

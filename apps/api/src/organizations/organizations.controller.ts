@@ -1,7 +1,7 @@
 import { Controller, Post, Body, UseGuards, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { OrganizationsService } from './organizations.service';
-import { MockAuthGuard } from '../auth/mock-auth.guard';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 class CreateOrganizationDto {
   name: string;
@@ -9,7 +9,7 @@ class CreateOrganizationDto {
 
 @ApiTags('organizations')
 @Controller('api/organizations')
-@UseGuards(MockAuthGuard)
+@UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class OrganizationsController {
   constructor(private organizationsService: OrganizationsService) {}

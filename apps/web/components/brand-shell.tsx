@@ -24,7 +24,6 @@ import {
   Users,
   Menu,
   X,
-  ChevronDown,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -34,15 +33,12 @@ const navigation = [
   { name: 'Endpoints', href: '/endpoints', icon: Server },
   { name: 'Usage', href: '/usage', icon: BarChart3 },
   { name: 'Billing', href: '/billing', icon: CreditCard },
-  { name: 'Settings', href: '/settings', icon: Settings },
   { name: 'Members', href: '/members', icon: Users },
 ];
 
 export function BrandShell({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [orgDropdownOpen, setOrgDropdownOpen] = useState(false);
   const [userData, setUserData] = useState<any>(null);
-  const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null);
   const pathname = usePathname();
   const { user } = useUser();
 
@@ -60,16 +56,6 @@ export function BrandShell({ children }: { children: React.ReactNode }) {
         if (response.ok) {
           const data = await response.json();
           setUserData(data);
-          // Set the first organization as selected by default
-          if (data.organizations && data.organizations.length > 0) {
-            const currentOrgId = localStorage.getItem('selectedOrgId');
-            if (currentOrgId && data.organizations.find((org: any) => org.id === currentOrgId)) {
-              setSelectedOrgId(currentOrgId);
-            } else {
-              setSelectedOrgId(data.organizations[0].id);
-              localStorage.setItem('selectedOrgId', data.organizations[0].id);
-            }
-          }
         }
       } catch (error) {
       }
@@ -77,13 +63,6 @@ export function BrandShell({ children }: { children: React.ReactNode }) {
 
     fetchUserData();
   }, []);
-
-  const handleOrgSwitch = (orgId: string) => {
-    setSelectedOrgId(orgId);
-    localStorage.setItem('selectedOrgId', orgId);
-    // Refresh the page to update dashboard and billing data
-    window.location.reload();
-  };
 
   return (
     <div className="min-h-screen bg-neutral-50">
@@ -190,36 +169,6 @@ export function BrandShell({ children }: { children: React.ReactNode }) {
             </div>
 
             <div className="flex items-center space-x-4">
-              {/* Organization selector */}
-              <DropdownMenu open={orgDropdownOpen} onOpenChange={setOrgDropdownOpen}>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="flex items-center space-x-2">
-                    <span>{userData?.organizations?.find((org: any) => org.id === selectedOrgId)?.name || userData?.organizations?.[0]?.name || 'Demo Organization'}</span>
-                    <ChevronDown className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuLabel>Organizations</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {userData?.organizations?.map((org: any) => (
-                    <DropdownMenuItem 
-                      key={org.id} 
-                      onClick={() => handleOrgSwitch(org.id)}
-                      className={selectedOrgId === org.id ? 'bg-accent' : ''}
-                    >
-                      {org.name}
-                    </DropdownMenuItem>
-                  )) || (
-                    <DropdownMenuItem>
-                      Demo Organization
-                    </DropdownMenuItem>
-                  )}
-                  <DropdownMenuItem asChild>
-                    <Link href="/create-organization">Create new organization</Link>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-
               {/* User menu */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -243,7 +192,7 @@ export function BrandShell({ children }: { children: React.ReactNode }) {
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
-                    <Link href="/settings">Settings</Link>
+                    {/* Settings removed */}
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link href="/api/auth/logout">Sign out</Link>

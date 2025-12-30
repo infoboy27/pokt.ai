@@ -1,7 +1,7 @@
 import { Controller, Get, Param, UseGuards, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { HealthCheckService } from './health-check.service';
-import { MockAuthGuard } from '../auth/mock-auth.guard';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @ApiTags('health')
 @Controller('health')
@@ -28,7 +28,7 @@ export class HealthController {
   }
 
   @Get('endpoints')
-  @UseGuards(MockAuthGuard)
+  @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Check health of all endpoints' })
   @ApiResponse({ status: 200, description: 'Health check completed' })
@@ -39,7 +39,7 @@ export class HealthController {
   }
 
   @Get('endpoints/:id')
-  @UseGuards(MockAuthGuard)
+  @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Check health of specific endpoint' })
   @ApiResponse({ status: 200, description: 'Health check completed' })

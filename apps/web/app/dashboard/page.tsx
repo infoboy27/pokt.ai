@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { UsageChart } from '@/components/usage-chart';
+import PaymentStatusBanner from '@/components/PaymentStatusBanner';
 
 interface DashboardStats {
   totalRelays: number;
@@ -54,15 +55,45 @@ export default function DashboardPage() {
     
     const fetchStats = async () => {
       try {
-        const response = await fetch('/api/dashboard/stats');
+        console.log('[DASHBOARD] Fetching stats from /api/dashboard/stats');
+        console.log('[DASHBOARD] Timestamp:', Date.now());
+        console.log('[DASHBOARD] ENV Check - NEXT_PUBLIC_API_URL:', process.env.NEXT_PUBLIC_API_URL || 'NOT SET (GOOD!)');
+        
+        // Force bypass ALL caching with timestamp and headers
+        const timestamp = Date.now();
+        const url = `/api/dashboard/stats?_nocache=${timestamp}&v=2`;
+        console.log('[DASHBOARD] Fetching URL:', url);
+        
+        const response = await fetch(url, {
+          method: 'GET',
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0',
+          }
+        });
+        console.log('[DASHBOARD] Response status:', response.status);
+        
         if (response.ok) {
           const data = await response.json();
-          setStats(data); // Data is at root level, not nested under 'stats'
-          setRecentActivity(data.recentActivity || []);
+          console.log('[DASHBOARD] Raw received data:', JSON.stringify(data, null, 2));
+          
+          // Check if data is nested under 'stats' property or at root level
+          const statsData = data.stats || data;
+          console.log('[DASHBOARD] Using stats:', statsData);
+          console.log('[DASHBOARD] Total Relays:', statsData.totalRelays);
+          console.log('[DASHBOARD] Monthly Cost:', statsData.monthlyCost);
+          
+          setStats(statsData);
+          setRecentActivity(data.recentActivity || statsData.recentActivity || []);
         } else {
+          const errorData = await response.text();
+          console.error('[DASHBOARD] API error:', response.status, errorData);
           setError('Failed to load dashboard data');
         }
       } catch (err) {
+        console.error('[DASHBOARD] Fetch error:', err);
         setError('Failed to load dashboard data');
       } finally {
         setLoading(false);
@@ -181,7 +212,7 @@ export default function DashboardPage() {
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-lg border bg-card text-card-foreground shadow-sm">
           <div className="flex flex-row items-center justify-between space-y-0 p-6 pb-2">
             <p className="text-sm font-medium leading-none tracking-tight">Total Relays</p>
@@ -190,7 +221,7 @@ export default function DashboardPage() {
           <div className="p-6 pt-0">
             <div className="text-2xl font-bold">{formatNumber(stats?.totalRelays || 0)}</div>
             <p className="text-xs text-muted-foreground">
-              {stats?.relayChangePercent > 0 ? '+' : ''}{stats?.relayChangePercent || 0}% from last month
+              {stats?.relayChangePercent && stats.relayChangePercent > 0 ? '+' : ''}{stats?.relayChangePercent || 0}% from last month
             </p>
           </div>
         </div>
@@ -203,7 +234,7 @@ export default function DashboardPage() {
           <div className="p-6 pt-0">
             <div className="text-2xl font-bold">{formatCurrency(stats?.monthlyCost || 0)}</div>
             <p className="text-xs text-muted-foreground">
-              {stats?.planType || 'Free'} plan
+              {stats?.planType || 'Pay-as-you-go'} plan
             </p>
           </div>
         </div>
@@ -235,8 +266,8 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        <div className="col-span-4 rounded-lg border bg-card text-card-foreground shadow-sm">
+      <div className="grid gap-4 grid-cols-1 lg:grid-cols-7">
+        <div className="lg:col-span-4 rounded-lg border bg-card text-card-foreground shadow-sm">
           <div className="p-6">
             <h3 className="text-lg font-semibold">Overview</h3>
             <p className="text-sm text-muted-foreground mb-4">
@@ -246,7 +277,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="col-span-3 rounded-lg border bg-card text-card-foreground shadow-sm">
+        <div className="lg:col-span-3 rounded-lg border bg-card text-card-foreground shadow-sm">
           <div className="p-6">
             <h3 className="text-lg font-semibold">Recent Activity</h3>
             <p className="text-sm text-muted-foreground mb-4">

@@ -3,16 +3,12 @@ import { NextRequest, NextResponse } from 'next/server';
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
-  // Debug logging
-  console.log(`[MIDDLEWARE] Processing: ${pathname}`);
-  
   // Define protected routes that require authentication
   const protectedRoutes = [
     '/dashboard',
     '/endpoints', 
     '/usage',
     '/billing',
-    '/settings',
     '/members',
     '/admin'
   ];
@@ -21,8 +17,6 @@ export function middleware(request: NextRequest) {
   const isProtectedRoute = protectedRoutes.some(route => 
     pathname.startsWith(route)
   );
-  
-  console.log(`[MIDDLEWARE] Is protected route: ${isProtectedRoute}`);
   
   // Allow public routes
   const publicRoutes = [
@@ -36,31 +30,30 @@ export function middleware(request: NextRequest) {
     '/favicon.ico'
   ];
   
+  // Allow admin endpoints with special header (for internal/admin use)
+  const adminKey = request.headers.get('x-admin-key');
+  const validAdminKey = process.env.ADMIN_API_KEY || 'dev-admin-key-change-in-production';
+  if (pathname.startsWith('/api/admin/') && adminKey === validAdminKey) {
+    return NextResponse.next();
+  }
+  
   const isPublicRoute = publicRoutes.some(route => 
     pathname.startsWith(route)
   );
   
-  console.log(`[MIDDLEWARE] Is public route: ${isPublicRoute}`);
-  
   // If it's a protected route and not a public route, check authentication
   if (isProtectedRoute && !isPublicRoute) {
-    console.log(`[MIDDLEWARE] Checking authentication for: ${pathname}`);
-    
     // Check for authentication token
     const token = request.cookies.get('auth_token')?.value || 
                   request.headers.get('authorization')?.replace('Bearer ', '');
     
-    console.log(`[MIDDLEWARE] Token found: ${!!token}`);
-    
     if (!token) {
-      console.log(`[MIDDLEWARE] No token, redirecting to login`);
       // Redirect to login page
       const loginUrl = new URL('/login', request.url);
       loginUrl.searchParams.set('redirect', pathname);
       return NextResponse.redirect(loginUrl);
     }
     
-    console.log(`[MIDDLEWARE] Token found, allowing access`);
     // TODO: Validate token with backend
     // For now, we'll allow access if token exists
   }

@@ -12,6 +12,9 @@ export const metadata: Metadata = {
   description: 'AI-powered RPC Gateway on top of Pocket Network Shannon + PATH',
   keywords: ['RPC', 'blockchain', 'Pocket Network', 'AI', 'gateway'],
   authors: [{ name: 'pokt.ai' }],
+  icons: {
+    icon: '/favicon.svg',
+  },
 };
 
 export const viewport = {

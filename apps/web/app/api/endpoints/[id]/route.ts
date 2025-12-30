@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { endpointQueries } from '@/lib/database';
+import { endpointQueries, usageQueries } from '@/lib/database';
+import { calculateCost, calculateCostInCents, formatCost } from '@/lib/pricing';
 
-// DELETE /api/endpoints/[id] - Delete endpoint permanently
+// DELETE /api/endpoints/[id] - Delete endpoint (soft delete)
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -21,10 +22,24 @@ export async function DELETE(
       );
     }
 
-    // Delete endpoint (mark as inactive)
-    const success = await endpointQueries.delete(id);
+    // Check if already deleted
+    if (endpoint.deleted_at) {
+      return NextResponse.json(
+        { error: 'Endpoint already deleted' },
+        { status: 400 }
+      );
+    }
+
+    // Calculate final bill for unpaid usage
+    const usageData = await usageQueries.getUsageByEndpointId(id);
+    const totalRelays = usageData?.totalRelays || 0;
+    const finalBillAmount = calculateCost(totalRelays);
+    const finalBillCents = calculateCostInCents(totalRelays);
+
+    // Soft delete endpoint (mark as inactive, preserve for billing)
+    const deletedEndpoint = await endpointQueries.delete(id);
     
-    if (!success) {
+    if (!deletedEndpoint) {
       return NextResponse.json(
         { error: 'Failed to delete endpoint' },
         { status: 500 }
@@ -34,13 +49,20 @@ export async function DELETE(
     return NextResponse.json({
       success: true,
       message: `Endpoint '${endpoint.name}' deleted successfully`,
+      warning: finalBillAmount > 0 
+        ? `This endpoint has unpaid usage of ${formatCost(finalBillAmount)} (${totalRelays.toLocaleString()} requests). You will be billed on the next billing cycle.`
+        : null,
       deletedEndpoint: {
         id: endpoint.id,
         name: endpoint.name,
-        totalRelays: endpoint.totalRelays,
+        deletedAt: new Date().toISOString(),
         finalBill: {
-          relays: endpoint.totalRelays,
-          cost: Math.round(endpoint.totalRelays * 0.0001 * 100), // cents
+          relays: totalRelays,
+          costCents: finalBillCents,
+          costDollars: finalBillAmount,
+          formattedCost: formatCost(finalBillAmount),
+          willBeBilled: finalBillAmount > 0,
+          billingDate: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).toISOString().split('T')[0],
         },
       },
     });

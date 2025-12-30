@@ -2,7 +2,24 @@
 const nextConfig = {
   output: 'standalone',
   images: {
-    domains: ['localhost', 'pokt.ai'],
+    domains: ['localhost', 'pokt.ai', 'assets.coingecko.com', 'cryptologos.cc', 'raw.githubusercontent.com'],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'assets.coingecko.com',
+        pathname: '/coins/images/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'cryptologos.cc',
+        pathname: '/logos/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'raw.githubusercontent.com',
+        pathname: '/trustwallet/assets/**',
+      },
+    ],
   },
   env: {
     PORT: process.env.PORT || '4000',
@@ -39,50 +56,28 @@ const nextConfig = {
     ];
   },
   async redirects() {
-    return [
-      {
-        source: '/app',
-        destination: '/dashboard',
-        permanent: true,
-      },
-      {
-        source: '/app/dashboard',
-        destination: '/dashboard',
-        permanent: true,
-      },
-      {
-        source: '/app/usage',
-        destination: '/usage',
-        permanent: true,
-      },
-      {
-        source: '/app/billing',
-        destination: '/billing',
-        permanent: true,
-      },
-      {
-        source: '/app/settings',
-        destination: '/settings',
-        permanent: true,
-      },
-      {
-        source: '/app/members',
-        destination: '/members',
-        permanent: true,
-      },
-    ];
+    return [];
   },
   // Ensure proper handling of API routes
   async rewrites() {
-    // Temporarily disabled rewrite rule to test gateway
-    // if (process.env.NEXT_PUBLIC_API_URL) {
-    //   return [
-    //     {
-    //       source: '/api/((?!gateway).*)',
-    //       destination: process.env.NEXT_PUBLIC_API_URL + '/:path*',
-    //     },
-    //   ];
-    // }
+    // Enable rewrite for dashboard to use Next.js API (not NestJS)
+    // This ensures we use the Next.js API routes which have real data
+    // Exception: Keep gateway, auth, and certain routes in Next.js
+    if (process.env.NEXT_PUBLIC_API_URL) {
+      return [
+        {
+          // Route most API calls to NestJS, except:
+          // - dashboard: Next.js API routes
+          // - gateway: Next.js RPC gateway
+          // - billing: Next.js billing routes
+          // - usage: Next.js usage routes
+          // - endpoints: Next.js endpoints routes
+          // - auth: Next.js authentication routes (login, me, register, etc.)
+          source: '/api/((?!dashboard|gateway|billing|usage|endpoints|auth).*)',
+          destination: process.env.NEXT_PUBLIC_API_URL + '/:path*',
+        },
+      ];
+    }
     return [];
   },
 };

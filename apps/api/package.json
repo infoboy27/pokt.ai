@@ -37,6 +37,7 @@
     "@nestjs/schedule": "^4.0.0",
     "@nestjs/swagger": "^7.1.0",
     "@prisma/client": "^5.7.0",
+    "@sendgrid/mail": "^8.1.6",
     "@sentry/nestjs": "^10.15.0",
     "@sentry/node": "^10.15.0",
     "bcryptjs": "^2.4.3",
@@ -49,6 +50,7 @@
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.8.1",
     "stripe": "^14.10.0",
+    "pdfkit": "^0.13.0",
     "zod": "^3.22.4"
   },
   "devDependencies": {

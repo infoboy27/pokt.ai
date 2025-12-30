@@ -225,7 +225,7 @@ npm start</code></pre>
           <div class="footer">
             <p style="font-size: 16px; font-weight: 600; color: #1E3A8A; margin-bottom: 15px;">Built with ❤️ by your AI assistant</p>
             <p style="margin: 10px 0;">Powered by <strong>Pocket Network</strong> via pokt.ai</p>
-            <p style="margin: 10px 0;">© 2024 pokt.ai. All rights reserved.</p>
+            <p style="margin: 10px 0;">© ${new Date().getFullYear()} pokt.ai. All rights reserved.</p>
             <p style="margin-top: 25px; font-size: 13px; color: #94a3b8;">This email was sent to ${email} regarding your pokt.ai project documentation.</p>
           </div>
         </div>

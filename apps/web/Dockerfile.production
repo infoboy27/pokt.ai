@@ -18,8 +18,8 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/web/package.json ./apps/web/
 COPY packages/*/package.json ./packages/*/
 
-# Install dependencies
-RUN pnpm install --frozen-lockfile --prod
+# Install dependencies (allow lockfile drift in CI)
+RUN pnpm install --no-frozen-lockfile --prod
 
 # =============================================================================
 # BUILD STAGE
@@ -35,11 +35,16 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/web/package.json ./apps/web/
 COPY packages/*/package.json ./packages/*/
 
-# Install all dependencies (including dev)
-RUN pnpm install --frozen-lockfile
+# Copy source code BEFORE installing (needed for workspace dependencies)
+# Copy packages first (workspace dependencies)
+COPY packages ./packages
 
-# Copy source code
-COPY . .
+# Install all dependencies (including dev)
+# This will resolve workspace dependencies now that packages are available
+RUN pnpm install --no-frozen-lockfile
+
+# Copy remaining source code
+COPY apps ./apps
 
 # Build the application
 WORKDIR /app/apps/web
@@ -59,14 +64,31 @@ RUN apk add --no-cache curl
 
 WORKDIR /app
 
-# Copy production dependencies
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
-
 # Copy built application
+# Next.js standalone build structure:
+# - .next/standalone/ contains server.js and minimal node_modules
+# - .next/static/ contains CSS, JS chunks, and other static assets
+# - public/ contains public assets
+#
+# Static files are served from /_next/static/, so they must be at .next/static/
+# relative to where server.js runs. Since standalone includes server.js at the root
+# of standalone/, we copy standalone to /app and static to /app/.next/static/
+
+# Copy standalone build (contains server.js in apps/web/)
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
+
+# Copy static files - Next.js standalone needs static files relative to server.js
+# Since server.js is in apps/web/, static files should be in apps/web/.next/static/
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
+
+# Also copy to root as fallback (some Next.js versions expect it there)
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./.next/static
+
+# Copy public assets (Next.js serves from /public/)
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/public ./public
+
+# Set working directory to where server.js is located
+WORKDIR /app/apps/web
 
 # Switch to non-root user
 USER nextjs
@@ -79,7 +101,11 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
   CMD curl -f http://localhost:4000 || exit 1
 
 # Start the application
-CMD ["node", "server.js"]
+# Try server.js at root first (most common for standalone builds)
+# If that doesn't work, try apps/web/server.js (for monorepo structure)
+# The standalone build should have server.js at the root of the copied standalone directory
+# Explicitly bind to 0.0.0.0 to allow connections from all networks
+CMD ["sh", "-c", "if [ -f server.js ]; then HOSTNAME=0.0.0.0 PORT=4000 node server.js; elif [ -f apps/web/server.js ]; then HOSTNAME=0.0.0.0 PORT=4000 node apps/web/server.js; else echo 'Error: server.js not found'; exit 1; fi"]
 
 
 

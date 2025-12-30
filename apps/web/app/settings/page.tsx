@@ -31,9 +31,6 @@ import {
 } from 'lucide-react';
 
 export default function SettingsPage() {
-  const [userRole, setUserRole] = useState<'customer' | 'admin' | 'loading'>('loading');
-  const [saving, setSaving] = useState(false);
-
   // Customer Settings State
   const [customerSettings, setCustomerSettings] = useState({
     // Profile Settings
@@ -102,6 +99,10 @@ export default function SettingsPage() {
     debugMode: false,
     analyticsEnabled: true,
   });
+
+  // User role state
+  const [userRole, setUserRole] = useState<'admin' | 'customer' | 'loading'>('loading');
+  const [saving, setSaving] = useState(false);
 
   // Detect user role
   useEffect(() => {

@@ -1,31 +1,36 @@
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PassportStrategy } from '@nestjs/passport';
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor() {
+  constructor(private configService: ConfigService) {
+    const secret = configService.get<string>('JWT_SECRET');
+    
+    if (!secret) {
+      throw new Error('JWT_SECRET is not defined in environment variables');
+    }
+    
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: process.env.JWT_SECRET || '4938402905037ce7294a09752c802fc2',
+      secretOrKey: secret,
     });
   }
 
   async validate(payload: any) {
-    // Handle mock token for testing
-    if (payload === 'mock-jwt-token-for-testing') {
-      return {
-        id: 'user-1',
-        email: 'demo@pokt.ai',
-        auth0Sub: 'auth0|demo-user'
-      };
+    // Validate payload structure
+    if (!payload || !payload.sub || !payload.email) {
+      throw new UnauthorizedException('Invalid token payload');
     }
     
+    // Return user object that will be attached to request
     return { 
       id: payload.sub, 
       email: payload.email, 
-      auth0Sub: payload.auth0Sub 
+      auth0Sub: payload.auth0Sub || payload.sub,
+      orgId: payload.orgId
     };
   }
 }

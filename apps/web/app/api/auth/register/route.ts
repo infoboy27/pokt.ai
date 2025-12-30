@@ -34,7 +34,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Proxy to the backend API for registration (which includes email sending)
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+    // Use internal Docker network URL to avoid Traefik routing issues
+    // Note: Using IP address directly due to DNS resolution issues in Next.js runtime
+    const backendUrl = process.env.INTERNAL_API_URL?.replace('api:3001', '172.20.0.7:3001') || 'http://172.20.0.7:3001/api';
     console.log('[REGISTER] Calling backend API:', `${backendUrl}/auth/register`);
     
     const backendResponse = await fetch(`${backendUrl}/auth/register`, {

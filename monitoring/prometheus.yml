@@ -39,11 +39,10 @@ scrape_configs:
     static_configs:
       - targets: ['redis-exporter:9121']
 
-  # Node.js application metrics
-  - job_name: 'node-apps'
+  # Node exporter (host metrics)
+  - job_name: 'node'
     static_configs:
-      - targets: ['api:3001', 'web:4000']
-    metrics_path: '/metrics'
+      - targets: ['node-exporter:9100']
 
 
 

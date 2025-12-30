@@ -43,7 +43,29 @@ export default function UsagePage() {
       try {
         setLoading(true);
         const days = timeRange === '1h' ? 1 : timeRange === '24h' ? 1 : timeRange === '7d' ? 7 : 30;
-        const response = await fetch(`/api/usage/analytics?days=${days}&granularity=${granularity}`);
+        
+        // Get user's organization ID to filter metrics by organization
+        let orgId: string | null = null;
+        try {
+          const userResponse = await fetch('/api/auth/me');
+          if (userResponse.ok) {
+            const userData = await userResponse.json();
+            // Use first organization (or organizationId if available)
+            orgId = userData.organizationId || (userData.organizations && userData.organizations[0]?.id) || null;
+          }
+        } catch (e) {
+          console.warn('Could not fetch user organization:', e);
+        }
+        
+        // Build headers with organization ID if available
+        const headers: HeadersInit = {};
+        if (orgId) {
+          headers['X-Organization-ID'] = orgId;
+        }
+        
+        const response = await fetch(`/api/usage/analytics?days=${days}&granularity=${granularity}`, {
+          headers
+        });
         
         if (response.ok) {
           const data = await response.json();
@@ -439,7 +461,7 @@ export default function UsagePage() {
                         </tr>
                     </thead>
                     <tbody>
-                        ${data.chartData.slice(0, 15).map(item => `
+                        ${data.chartData.slice(0, 15).map((item: any) => `
                             <tr>
                                 <td>${new Date(item.period).toLocaleString()}</td>
                                 <td>${item.totalRequests.toLocaleString()}</td>
@@ -709,7 +731,7 @@ export default function UsagePage() {
                         </tr>
                     </thead>
                     <tbody>
-                        ${data.chartData.slice(0, 10).map(item => `
+                        ${data.chartData.slice(0, 10).map((item: any) => `
                             <tr>
                                 <td>${new Date(item.period).toLocaleString()}</td>
                                 <td>${item.totalRequests.toLocaleString()}</td>
@@ -743,15 +765,15 @@ export default function UsagePage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Usage Analytics</h1>
-          <p className="text-gray-600">
-            Monitor API usage and performance metrics
+          <div className="text-gray-600">
+            <p className="inline">Monitor API usage and performance metrics</p>
             {summary && (
-              <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
-                <div className="w-2 h-2 bg-green-500 rounded-full mr-1 animate-pulse"></div>
+              <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800 align-middle">
+                <span className="w-2 h-2 bg-green-500 rounded-full mr-1 animate-pulse inline-block"></span>
                 Real-time data
               </span>
             )}
-          </p>
+          </div>
         </div>
         <div className="flex items-center space-x-2">
           <Select value={timeRange} onValueChange={setTimeRange}>
@@ -907,7 +929,7 @@ export default function UsagePage() {
             </div>
           ) : (
             <UsageAnalyticsChart 
-              data={usageData} 
+              data={usageData as any} 
               chartType={chartType}
               height={300}
               showLatency={true}

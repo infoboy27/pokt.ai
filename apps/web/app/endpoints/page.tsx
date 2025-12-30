@@ -14,6 +14,13 @@ import {
   DialogTitle, 
   DialogTrigger 
 } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { 
   Plus, 
   Copy, 
@@ -25,61 +32,17 @@ import {
   Activity,
   Clock,
   DollarSign,
-  Search,
   Sparkles,
   CheckCircle2
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
-// Network configuration with logos and categories
-const NETWORKS = [
-  // Mainnets - EVM
-  { id: 'eth', name: 'Ethereum', category: 'EVM Mainnet', icon: '⟠', popular: true, chainId: 1 },
-  { id: 'bsc', name: 'BNB Smart Chain', category: 'EVM Mainnet', icon: '🔶', popular: true, chainId: 56 },
-  { id: 'poly', name: 'Polygon', category: 'EVM Mainnet', icon: '🟣', popular: true, chainId: 137 },
-  { id: 'arb-one', name: 'Arbitrum One', category: 'EVM Mainnet', icon: '🔵', popular: true, chainId: 42161 },
-  { id: 'opt', name: 'Optimism', category: 'EVM Mainnet', icon: '🔴', popular: true, chainId: 10 },
-  { id: 'base', name: 'Base', category: 'EVM Mainnet', icon: '🔷', popular: true, chainId: 8453 },
-  { id: 'avax', name: 'Avalanche', category: 'EVM Mainnet', icon: '❄️', chainId: 43114 },
-  { id: 'linea', name: 'Linea', category: 'EVM Mainnet', icon: '📐', chainId: 59144 },
-  { id: 'mantle', name: 'Mantle', category: 'EVM Mainnet', icon: '🌐', chainId: 5000 },
-  { id: 'blast', name: 'Blast', category: 'EVM Mainnet', icon: '💥', chainId: 81457 },
-  { id: 'fantom', name: 'Fantom', category: 'EVM Mainnet', icon: '👻', chainId: 250 },
-  { id: 'gnosis', name: 'Gnosis Chain', category: 'EVM Mainnet', icon: '🦉', chainId: 100 },
-  { id: 'celo', name: 'Celo', category: 'EVM Mainnet', icon: '🌱', chainId: 42220 },
-  { id: 'metis', name: 'Metis', category: 'EVM Mainnet', icon: '🔷', chainId: 1088 },
-  { id: 'boba', name: 'Boba Network', category: 'EVM Mainnet', icon: '🧋', chainId: 288 },
-  { id: 'fuse', name: 'Fuse', category: 'EVM Mainnet', icon: '⚡', chainId: 122 },
-  { id: 'kava', name: 'Kava', category: 'EVM Mainnet', icon: '🌿', chainId: 2222 },
-  { id: 'fraxtal', name: 'Fraxtal', category: 'EVM Mainnet', icon: '❄️', chainId: 252 },
-  { id: 'oasys', name: 'Oasys', category: 'EVM Mainnet', icon: '🎮', chainId: 248 },
-  { id: 'ink', name: 'Ink', category: 'EVM Mainnet', icon: '🖊️', chainId: 200 },
-  { id: 'bera', name: 'Berachain', category: 'EVM Mainnet', icon: '🐻', chainId: 80085 },
-  { id: 'sonic', name: 'Sonic', category: 'EVM Mainnet', icon: '💨', chainId: 146 },
-  
-  // Non-EVM Mainnets
-  { id: 'solana', name: 'Solana', category: 'Non-EVM Mainnet', icon: '◎', popular: true },
-  { id: 'sui', name: 'Sui', category: 'Non-EVM Mainnet', icon: '💧' },
-  { id: 'pokt', name: 'Pocket Network', category: 'Non-EVM Mainnet', icon: '🔮' },
-  
-  // Testnets
-  { id: 'eth-sepolia-testnet', name: 'Ethereum Sepolia', category: 'Testnet', icon: '⟠', testnet: true },
-  { id: 'eth-holesky-testnet', name: 'Ethereum Holesky', category: 'Testnet', icon: '⟠', testnet: true },
-  { id: 'base-sepolia-testnet', name: 'Base Sepolia', category: 'Testnet', icon: '🔷', testnet: true },
-  { id: 'arb-sepolia-testnet', name: 'Arbitrum Sepolia', category: 'Testnet', icon: '🔵', testnet: true },
-  { id: 'opt-sepolia-testnet', name: 'Optimism Sepolia', category: 'Testnet', icon: '🔴', testnet: true },
-  
-  // Local Development
-  { id: 'anvil', name: 'Anvil Local', category: 'Development', icon: '🔨' },
-];
-
 export default function EndpointsPage() {
   const [endpoints, setEndpoints] = useState<any[]>([]);
-  // Removed showTokens state since we use static API key
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [availableNetworks, setAvailableNetworks] = useState<any[]>([]);
+  const [networksLoading, setNetworksLoading] = useState(true);
   const [newEndpoint, setNewEndpoint] = useState({
     name: '',
     chainId: 1, // Default to Ethereum mainnet
@@ -88,27 +51,58 @@ export default function EndpointsPage() {
 
   useEffect(() => {
     loadEndpoints();
+    loadAvailableNetworks();
   }, []);
+
+  const loadAvailableNetworks = async () => {
+    try {
+      setNetworksLoading(true);
+      const response = await fetch('/api/networks/detect');
+      if (response.ok) {
+        const data = await response.json();
+        setAvailableNetworks(data.networks || []);
+        console.log(`[ENDPOINTS] Loaded ${data.networks.length} available networks (cached: ${data.metadata.cached})`);
+      } else {
+        // Fallback to default networks if detection fails
+        setAvailableNetworks([
+          { id: 1, name: 'Ethereum', icon: '⟠', status: '✅ Online', chainId: 1 },
+          { id: 42161, name: 'Arbitrum One', icon: '🔵', status: '✅ Online', chainId: 42161 },
+          { id: 10, name: 'Optimism', icon: '🔴', status: '✅ Online', chainId: 10 },
+          { id: 8453, name: 'Base', icon: '🔷', status: '✅ Online', chainId: 8453 },
+        ]);
+      }
+    } catch (error) {
+      console.error('[ENDPOINTS] Error loading networks:', error);
+      // Use fallback networks
+      setAvailableNetworks([
+        { id: 1, name: 'Ethereum', icon: '⟠', status: '✅ Online', chainId: 1 },
+      ]);
+    } finally {
+      setNetworksLoading(false);
+    }
+  };
 
   const loadEndpoints = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/endpoints?t=${Date.now()}`);
+      // Don't use localStorage for orgId - let the API use the first organization
+      // This ensures consistency with the dashboard which uses the first organization
+      const url = `/api/endpoints?t=${Date.now()}`;
+      
+      const response = await fetch(url);
       if (response.ok) {
         const data = await response.json();
         if (data.endpoints) {
-          // Override all tokens with static API key for display
-          const staticApiKey = process.env.NEXT_PUBLIC_STATIC_API_KEY || 'sk_pokt_ai_static_key';
-          const endpointsWithStaticKey = data.endpoints.map((endpoint: any) => ({
-            ...endpoint,
-            token: staticApiKey
-          }));
-          setEndpoints(endpointsWithStaticKey);
+          // Use actual endpoint tokens from the API
+          setEndpoints(data.endpoints);
+          console.log('[ENDPOINTS PAGE] Loaded', data.endpoints.length, 'endpoints');
         }
       } else {
+        console.error('[ENDPOINTS PAGE] Failed to load endpoints:', response.status);
         setEndpoints([]);
       }
     } catch (error) {
+      console.error('[ENDPOINTS PAGE] Error loading endpoints:', error);
       setEndpoints([]);
     } finally {
       setLoading(false);
@@ -154,14 +148,12 @@ export default function EndpointsPage() {
       if (response.ok) {
         const responseData = await response.json();
         const newEndpointData = responseData.endpoint; // Production API returns { endpoint: {...} }
-        // Override token with static API key
-        const staticApiKey = process.env.NEXT_PUBLIC_STATIC_API_KEY || 'sk_pokt_ai_static_key';
-        const endpointWithStaticKey = {
+        // Use actual endpoint token from the API
+        const endpointWithToken = {
           ...newEndpointData,
-          token: staticApiKey,
           relays: 0
         };
-        setEndpoints(prev => [endpointWithStaticKey, ...prev]);
+        setEndpoints(prev => [endpointWithToken, ...prev]);
         setNewEndpoint({ name: '', chainId: 1 });
         setIsCreateDialogOpen(false);
         
@@ -215,42 +207,32 @@ export default function EndpointsPage() {
     }
   };
 
-  const selectNetwork = (networkId: string) => {
-    const network = NETWORKS.find(n => n.id === networkId);
+  const handleNetworkChange = (chainIdStr: string) => {
+    const chainId = parseInt(chainIdStr);
+    const network = availableNetworks.find(n => n.chainId === chainId);
     if (network) {
       setNewEndpoint(prev => ({
         ...prev,
-        chainId: network.chainId || 1, // Use numeric chainId, default to 1 (Ethereum)
+        chainId: network.chainId,
         name: prev.name || network.name,
       }));
     }
   };
 
-  const filteredNetworks = NETWORKS.filter(network => {
-    const matchesSearch = network.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         network.category.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' || 
-                           (selectedCategory === 'popular' && network.popular) ||
-                           (selectedCategory === 'mainnet' && !network.testnet && network.category.includes('Mainnet')) ||
-                           (selectedCategory === 'testnet' && network.testnet);
-    return matchesSearch && matchesCategory;
-  });
-
-  const categories = ['all', 'popular', 'mainnet', 'testnet'];
-
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-bold text-gray-900">Your RPC Endpoints</h1>
+          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900">Your RPC Endpoints</h1>
           <p className="text-gray-600 mt-2">Create and manage blockchain RPC endpoints instantly</p>
         </div>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
-            <Button size="lg" className="gap-2">
+            <Button size="lg" className="gap-2 w-full sm:w-auto">
               <Plus className="w-5 h-5" />
-              Create New Endpoint
+              <span className="hidden sm:inline">Create New Endpoint</span>
+              <span className="sm:hidden">Create Endpoint</span>
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
@@ -277,77 +259,48 @@ export default function EndpointsPage() {
                 />
               </div>
 
-              {/* Search and Filter */}
-              <div className="space-y-3">
-                <Label className="text-base font-semibold">Select Blockchain Network</Label>
-                
-                {/* Search */}
-                <div className="relative">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                  <Input
-                    placeholder="Search networks..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-
-                {/* Category Pills */}
-                <div className="flex gap-2 flex-wrap">
-                  {categories.map(cat => (
-                    <Button
-                      key={cat}
-                      variant={selectedCategory === cat ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setSelectedCategory(cat)}
-                      className="capitalize"
-                    >
-                      {cat}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Network Grid */}
-              <div className="grid grid-cols-2 gap-3 max-h-[400px] overflow-y-auto pr-2">
-                {filteredNetworks.map((network) => (
-                  <button
-                    key={network.id}
-                    onClick={() => selectNetwork(network.id)}
-                    className={`
-                      relative p-4 rounded-lg border-2 text-left transition-all hover:shadow-md
-                      ${newEndpoint.chainId === network.id 
-                        ? 'border-blue-500 bg-blue-50 shadow-sm' 
-                        : 'border-gray-200 hover:border-gray-300'
-                      }
-                    `}
+              {/* Blockchain Network Selector - Auto-detected from Shannon */}
+              <div className="space-y-2">
+                <Label htmlFor="network" className="text-base font-semibold">Select Blockchain Network</Label>
+                {networksLoading ? (
+                  <div className="flex items-center gap-2 p-3 border rounded-md bg-gray-50">
+                    <div className="animate-spin w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+                    <span className="text-sm text-gray-600">Detecting available networks...</span>
+                  </div>
+                ) : (
+                  <Select
+                    value={newEndpoint.chainId.toString()}
+                    onValueChange={handleNetworkChange}
+                    disabled={availableNetworks.length === 0}
                   >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <span className="text-2xl flex-shrink-0">{network.icon}</span>
-                        <div className="min-w-0 flex-1">
-                          <div className="font-semibold text-sm truncate">{network.name}</div>
-                          <div className="text-xs text-gray-500">{network.category}</div>
+                    <SelectTrigger className="w-full">
+                      <SelectValue>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xl">{availableNetworks.find(n => n.chainId === newEndpoint.chainId)?.icon || '🔗'}</span>
+                          <span>{availableNetworks.find(n => n.chainId === newEndpoint.chainId)?.name || 'Select network'}</span>
+                          <span className="text-xs text-green-600 ml-auto">{availableNetworks.find(n => n.chainId === newEndpoint.chainId)?.status}</span>
                         </div>
-                      </div>
-                      {newEndpoint.chainId === network.id && (
-                        <CheckCircle2 className="w-5 h-5 text-blue-500 flex-shrink-0" />
-                      )}
-                    </div>
-                    {network.popular && (
-                      <Badge variant="secondary" className="absolute top-2 right-2 text-xs">
-                        Popular
-                      </Badge>
-                    )}
-                  </button>
-                ))}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableNetworks.map((network, index) => (
+                        <SelectItem key={network.serviceId || network.id || `${network.chainId}-${index}`} value={network.chainId.toString()}>
+                          <div className="flex items-center gap-3 py-1">
+                            <span className="text-xl">{network.icon}</span>
+                            <div className="flex-1">
+                              <div className="font-medium">{network.name}</div>
+                              <div className="text-xs text-green-600">{network.status}</div>
+                            </div>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                <p className="text-xs text-gray-500">
+                  🔄 Available via PATH Gateway • {availableNetworks.length} networks available
+                </p>
               </div>
-
-              {filteredNetworks.length === 0 && (
-                <div className="text-center py-8 text-gray-500">
-                  No networks found matching your search
-                </div>
-              )}
             </div>
 
             <div className="flex justify-end gap-2 pt-4 border-t">
@@ -394,43 +347,45 @@ export default function EndpointsPage() {
         </div>
       )}
 
-      {/* Endpoints List - Compact List Format */}
+      {/* Endpoints List - Responsive Format */}
       {!loading && endpoints.length > 0 && (
         <div className="space-y-3">
           {endpoints.map((endpoint) => {
-            const network = NETWORKS.find(n => n.chainId === endpoint.chainId);
+            const network = availableNetworks.find(n => n.chainId === endpoint.chainId);
             
             return (
-              <div key={endpoint.id} className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
+              <div key={endpoint.id} className="flex flex-col lg:flex-row lg:items-center lg:justify-between p-4 bg-white border border-gray-200 rounded-lg hover:shadow-md transition-shadow gap-4">
+                {/* Header Section */}
                 <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-lg">
+                  <div className="w-10 h-10 flex-shrink-0 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-lg">
                     {network?.icon || '🌐'}
                   </div>
-                  <div>
-                    <div className="font-semibold text-gray-900">{endpoint.name}</div>
-                    <div className="text-sm text-gray-500">{network?.name || `Chain ${endpoint.chainId}`}</div>
+                  <div className="min-w-0 flex-1">
+                    <div className="font-semibold text-gray-900 truncate">{endpoint.name}</div>
+                    <div className="text-sm text-gray-500 truncate">{network?.name || `Chain ${endpoint.chainId}`}</div>
                   </div>
                 </div>
                 
-                <div className="flex items-center gap-6">
+                {/* Stats and Actions Section */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 lg:gap-6">
                   {/* Stats */}
-                  <div className="flex items-center gap-4 text-sm">
+                  <div className="flex items-center gap-3 sm:gap-4 text-sm flex-wrap">
                     <div className="flex items-center gap-1">
-                      <Activity className="w-4 h-4 text-gray-500" />
+                      <Activity className="w-4 h-4 text-gray-500 flex-shrink-0" />
                       <span className="text-gray-600">{(endpoint.billing?.totalRelays || endpoint.relays || 0).toLocaleString()}</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <DollarSign className="w-4 h-4 text-gray-500" />
+                      <DollarSign className="w-4 h-4 text-gray-500 flex-shrink-0" />
                       <span className="text-gray-600">${(endpoint.billing?.estimatedMonthlyCostDollars || 0).toFixed(4)}</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <Clock className="w-4 h-4 text-gray-500" />
+                      <Clock className="w-4 h-4 text-gray-500 flex-shrink-0" />
                       <span className="text-gray-600">{new Date(endpoint.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
                     </div>
                   </div>
                   
                   {/* Actions */}
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <Button
                       variant="outline"
                       size="sm"

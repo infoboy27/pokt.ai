@@ -131,7 +131,7 @@ export default function SignupPage() {
                 Start free, pay only for what you use. No monthly commitments or hidden fees.
               </p>
               <div className="mt-2 text-sm text-green-600">
-                <strong>$0.0001 per request</strong> • No setup fees • No minimums
+                <strong>$0.000001 per request</strong> • No setup fees • No minimums
               </div>
             </div>
           </CardHeader>

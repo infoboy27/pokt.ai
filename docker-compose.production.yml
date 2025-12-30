@@ -15,6 +15,8 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./backups:/backups
+    ports:
+      - "0.0.0.0:5432:5432"  # Expose to external IP for remote connections
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-pokt_ai}"]
       interval: 10s
@@ -33,11 +35,25 @@ services:
   # Redis Cache
   redis:
     image: redis:7-alpine
-    command: redis-server --requirepass ${REDIS_PASSWORD} --bind 0.0.0.0 --maxmemory 512mb --maxmemory-policy allkeys-lru
+    command: >
+      sh -c "
+      if [ -n \"$${REDIS_PASSWORD}\" ]; then
+        redis-server --requirepass \"$${REDIS_PASSWORD}\" --bind 0.0.0.0 --maxmemory 512mb --maxmemory-policy allkeys-lru
+      else
+        redis-server --bind 0.0.0.0 --maxmemory 512mb --maxmemory-policy allkeys-lru
+      fi
+      "
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "${REDIS_PASSWORD}", "ping"]
+      test: >
+        sh -c "
+        if [ -n \"$${REDIS_PASSWORD}\" ]; then
+          redis-cli --no-auth-warning -a \"$${REDIS_PASSWORD}\" ping
+        else
+          redis-cli ping
+        fi
+        "
       interval: 10s
       timeout: 5s
       retries: 5
@@ -115,24 +131,28 @@ services:
           cpus: '0.5'
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.api.rule=Host(`${DOMAIN}`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.api.rule=Host(`${DOMAIN}`) && (PathPrefix(`/api/health`) || PathPrefix(`/api/docs`))"
       - "traefik.http.routers.api.entrypoints=websecure"
       - "traefik.http.routers.api.tls=true"
       - "traefik.http.routers.api.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.api.priority=5"
       - "traefik.http.services.api.loadbalancer.server.port=3001"
-      - "traefik.http.middlewares.api-strip.stripprefix.prefixes=/api"
-      - "traefik.http.routers.api.middlewares=api-strip,security-headers,rate-limit"
-      - "traefik.docker.network=traefik"
+      - "traefik.docker.network=poktai_traefik"
 
   # Web Frontend (Next.js)
   web:
     build:
       context: .
-      dockerfile: apps/web/Dockerfile
-      target: production
+      dockerfile: apps/web/Dockerfile.production
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
+      # Database Connection
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      
       # API Connection
       NEXT_PUBLIC_API_URL: https://${DOMAIN}/api
+      INTERNAL_API_URL: http://api:3001/api
       
       # Authentication
       AUTH0_SECRET: ${AUTH0_SECRET}
@@ -144,13 +164,17 @@ services:
       # Stripe
       NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY}
       
+      # Email Service
+      SENDGRID_API_KEY: ${SENDGRID_API_KEY}
+      FROM_EMAIL: ${FROM_EMAIL}
+      
       # Analytics
       NEXT_PUBLIC_GA_ID: ${NEXT_PUBLIC_GA_ID}
       
       # Application
       NODE_ENV: production
       PORT: 4000
-      HOST: 0.0.0.0
+      HOSTNAME: 0.0.0.0
       
     depends_on:
       api:
@@ -175,14 +199,20 @@ services:
           cpus: '0.5'
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.web.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.web.rule=Host(`pokt.ai`)"
       - "traefik.http.routers.web.entrypoints=websecure"
       - "traefik.http.routers.web.tls=true"
       - "traefik.http.routers.web.tls.certresolver=letsencrypt"
       - "traefik.http.services.web.loadbalancer.server.port=4000"
-      - "traefik.http.routers.web.middlewares=security-headers"
-      - "traefik.http.routers.web.priority=1"
-      - "traefik.docker.network=traefik"
+      # - "traefik.http.routers.web.middlewares=security-headers"  # Commented out - middleware not defined
+      - "traefik.http.routers.web.priority=15"
+      - "traefik.http.routers.web-auth.rule=Host(`pokt.ai`) && PathPrefix(`/api/auth`)"
+      - "traefik.http.routers.web-auth.entrypoints=websecure"
+      - "traefik.http.routers.web-auth.tls=true"
+      - "traefik.http.routers.web-auth.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.web-auth.priority=20"
+      - "traefik.http.routers.web-auth.service=web"
+      - "traefik.docker.network=poktai_traefik"
 
   # =============================================================================
   # REVERSE PROXY & SSL
@@ -190,18 +220,24 @@ services:
 
   # Traefik Reverse Proxy
   traefik:
-    image: traefik:v3.0
+    image: traefik:v3.6
     command:
       - --api.dashboard=true
       - --api.insecure=false
       - --providers.docker=true
       - --providers.docker.exposedbydefault=false
       - --providers.docker.network=traefik
+      - --providers.docker.endpoint=unix:///var/run/docker.sock
+      - --providers.file.directory=/etc/traefik/services
+      - --providers.file.watch=true
       - --entrypoints.web.address=:80
       - --entrypoints.websecure.address=:443
-      - --certificatesresolvers.letsencrypt.acme.tlschallenge=true
       - --certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}
-      - --certificatesresolvers.letsencrypt.acme.storage=/acme.json
+      - --certificatesresolvers.letsencrypt.acme.storage=/acme/acme.json
+      - --certificatesresolvers.letsencrypt.acme.httpchallenge=true
+      - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
       - --log.level=INFO
       - --accesslog=true
       - --metrics.prometheus=true
@@ -210,7 +246,8 @@ services:
       - "443:443"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - traefik_acme:/acme.json
+      - traefik_acme:/acme
+      - /home/shannon/poktai/loadbalancer/services:/etc/traefik/services:ro
     networks:
       - traefik
     restart: unless-stopped
@@ -248,17 +285,44 @@ services:
       - "traefik.http.routers.prometheus.tls=true"
       - "traefik.http.routers.prometheus.tls.certresolver=letsencrypt"
       - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
-      - "traefik.docker.network=traefik"
+      - "traefik.docker.network=poktai_traefik"
+
+  node-exporter:
+    image: prom/node-exporter:v1.8.1
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--path.rootfs=/host/root'
+    pid: host
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/host/root:ro
+    networks:
+      - backend
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+        reservations:
+          memory: 64M
 
   # Grafana Dashboard
   grafana:
     image: grafana/grafana:latest
     environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD}
       GF_USERS_ALLOW_SIGN_UP: "false"
       GF_INSTALL_PLUGINS: grafana-piechart-panel
+    ports:
+      - "3000:3000"
     volumes:
       - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./monitoring/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
     networks:
       - backend
       - traefik
@@ -270,7 +334,14 @@ services:
       - "traefik.http.routers.grafana.tls=true"
       - "traefik.http.routers.grafana.tls.certresolver=letsencrypt"
       - "traefik.http.services.grafana.loadbalancer.server.port=3000"
-      - "traefik.docker.network=traefik"
+      - "traefik.docker.network=poktai_traefik"
+      # Alternative domain: monitor.pokt.ai (alias for Grafana)
+      - "traefik.http.routers.grafana-monitor.rule=Host(`monitor.pokt.ai`)"
+      - "traefik.http.routers.grafana-monitor.entrypoints=websecure"
+      - "traefik.http.routers.grafana-monitor.tls=true"
+      - "traefik.http.routers.grafana-monitor.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.grafana-monitor.service=grafana"
+      - "traefik.docker.network=poktai_traefik"
 
   # =============================================================================
   # BACKGROUND WORKERS
@@ -281,7 +352,6 @@ services:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
-      target: production
     command: ["node", "dist/src/workers/usage.worker.js"]
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-pokt_ai}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-pokt_ai}
@@ -307,7 +377,6 @@ services:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
-      target: production
     command: ["node", "dist/src/workers/billing.worker.js"]
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-pokt_ai}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-pokt_ai}
@@ -334,55 +403,55 @@ services:
   # BLOCKCHAIN EXPLORER (Optional)
   # =============================================================================
 
-  # Blockchain Explorer Backend
-  explorer-backend:
-    build:
-      context: ./blockchainexplorer/backend
-      dockerfile: Dockerfile
-    environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-pokt_ai}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-pokt_ai}
-      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
-      NODE_ENV: production
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    networks:
-      - backend
-      - traefik
-    restart: unless-stopped
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.explorer-api.rule=Host(`explorer.${DOMAIN}`) && PathPrefix(`/api`)"
-      - "traefik.http.routers.explorer-api.entrypoints=websecure"
-      - "traefik.http.routers.explorer-api.tls=true"
-      - "traefik.http.routers.explorer-api.tls.certresolver=letsencrypt"
-      - "traefik.http.services.explorer-api.loadbalancer.server.port=8000"
-      - "traefik.docker.network=traefik"
+  # Blockchain Explorer Backend (commented out - directory not present)
+  # explorer-backend:
+  #   build:
+  #     context: ./blockchainexplorer/backend
+  #     dockerfile: Dockerfile
+  #   environment:
+  #     DATABASE_URL: postgresql://${POSTGRES_USER:-pokt_ai}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-pokt_ai}
+  #     REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+  #     NODE_ENV: production
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+  #   networks:
+  #     - backend
+  #     - traefik
+  #   restart: unless-stopped
+  #   labels:
+  #     - "traefik.enable=true"
+  #     - "traefik.http.routers.explorer-api.rule=Host(`explorer.${DOMAIN}`) && PathPrefix(`/api`)"
+  #     - "traefik.http.routers.explorer-api.entrypoints=websecure"
+  #     - "traefik.http.routers.explorer-api.tls=true"
+  #     - "traefik.http.routers.explorer-api.tls.certresolver=letsencrypt"
+  #     - "traefik.http.services.explorer-api.loadbalancer.server.port=8000"
+  #     - "traefik.docker.network=traefik"
 
-  # Blockchain Explorer Frontend
-  explorer-frontend:
-    build:
-      context: ./blockchainexplorer/frontend
-      dockerfile: Dockerfile
-    environment:
-      VITE_API_URL: https://explorer.${DOMAIN}/api
-      NODE_ENV: production
-    depends_on:
-      - explorer-backend
-    networks:
-      - backend
-      - traefik
-    restart: unless-stopped
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.explorer.rule=Host(`explorer.${DOMAIN}`)"
-      - "traefik.http.routers.explorer.entrypoints=websecure"
-      - "traefik.http.routers.explorer.tls=true"
-      - "traefik.http.routers.explorer.tls.certresolver=letsencrypt"
-      - "traefik.http.services.explorer.loadbalancer.server.port=3000"
-      - "traefik.docker.network=traefik"
+  # Blockchain Explorer Frontend (commented out - directory not present)
+  # explorer-frontend:
+  #   build:
+  #     context: ./blockchainexplorer/frontend
+  #     dockerfile: Dockerfile
+  #   environment:
+  #     VITE_API_URL: https://explorer.${DOMAIN}/api
+  #     NODE_ENV: production
+  #   depends_on:
+  #     - explorer-backend
+  #   networks:
+  #     - backend
+  #     - traefik
+  #   restart: unless-stopped
+  #   labels:
+  #     - "traefik.enable=true"
+  #     - "traefik.http.routers.explorer.rule=Host(`explorer.${DOMAIN}`)"
+  #     - "traefik.http.routers.explorer.entrypoints=websecure"
+  #     - "traefik.http.routers.explorer.tls=true"
+  #     - "traefik.http.routers.explorer.tls.certresolver=letsencrypt"
+  #     - "traefik.http.services.explorer.loadbalancer.server.port=3000"
+  #     - "traefik.docker.network=traefik"
 
 # =============================================================================
 # VOLUMES

@@ -1,11 +1,11 @@
 import { Controller, Get, Query, UseGuards, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { UsageService } from './usage.service';
-import { MockAuthGuard } from '../auth/mock-auth.guard';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @ApiTags('usage')
 @Controller('usage')
-@UseGuards(MockAuthGuard)
+@UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class UsageController {
   constructor(private usageService: UsageService) {}

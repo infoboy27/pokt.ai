@@ -1,11 +1,11 @@
 import { Controller, Get, Query, UseGuards, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { DashboardService } from './dashboard.service';
-import { MockAuthGuard } from '../auth/mock-auth.guard';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @ApiTags('dashboard')
 @Controller('dashboard')
-// @UseGuards(MockAuthGuard) // Temporarily disabled for testing
+// @UseGuards(JwtAuthGuard) // Temporarily disabled for testing
 // @ApiBearerAuth()
 export class DashboardController {
   constructor(private dashboardService: DashboardService) {}

@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { StripeService } from './stripe.service';
+import { EmailService } from '../email/email.service';
 import Stripe from 'stripe';
 
 @Injectable()
@@ -10,6 +11,7 @@ export class BillingService {
   constructor(
     private prisma: PrismaService,
     private stripeService: StripeService,
+    private emailService: EmailService,
   ) {}
 
   async createBillingPortalSession(orgId: string) {
@@ -120,6 +122,26 @@ export class BillingService {
         status: 'paid',
       },
     });
+
+    // Notify org owner if available
+    try {
+      const orgId = invoice.metadata?.orgId;
+      if (orgId) {
+        const org = await this.prisma.organization.findUnique({
+          where: { id: orgId },
+          include: { owner: true },
+        });
+        if (org?.owner?.email) {
+          await this.emailService.send(
+            org.owner.email,
+            'Payment received - pokt.ai',
+            `Your payment for invoice ${invoice.id} was successful. Amount: $${(invoice.amount_paid / 100).toFixed(2)}.`,
+          );
+        }
+      }
+    } catch (err) {
+      this.logger.warn('Email notification failed (payment succeeded)', err as Error);
+    }
   }
 
   async handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
@@ -138,6 +160,26 @@ export class BillingService {
         status: 'uncollectible',
       },
     });
+
+    // Notify org owner if available
+    try {
+      const orgId = invoice.metadata?.orgId;
+      if (orgId) {
+        const org = await this.prisma.organization.findUnique({
+          where: { id: orgId },
+          include: { owner: true },
+        });
+        if (org?.owner?.email) {
+          await this.emailService.send(
+            org.owner.email,
+            'Payment failed - pokt.ai',
+            `Your payment for invoice ${invoice.id} failed. Please update your payment method. Amount due: $${(invoice.amount_due / 100).toFixed(2)}.`,
+          );
+        }
+      }
+    } catch (err) {
+      this.logger.warn('Email notification failed (payment failed)', err as Error);
+    }
   }
 
   async handleSubscriptionCreated(subscription: Stripe.Subscription) {
