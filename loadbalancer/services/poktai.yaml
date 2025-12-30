@@ -1,0 +1,335 @@
+http:
+  routers:
+    # chat.pokt.ai routing
+    # Allow ACME challenge via HTTP FIRST (highest priority, no redirect)
+    chat-poktai-acme-challenge:
+      rule: "Host(`chat.pokt.ai`) && PathPrefix(`/.well-known/acme-challenge/`)"
+      service: chat-poktai-redirect  # Dummy service - Traefik handles ACME internally
+      entryPoints:
+        - web
+      # No redirect middleware - let Traefik handle ACME challenge natively
+      priority: 1001  # Highest priority to ensure it matches before HTTPS redirect
+    
+    chat-poktai:
+      rule: "Host(`chat.pokt.ai`)"
+      service: chat-poktai
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+        domains:
+          - main: "chat.pokt.ai"
+      priority: 1000
+
+    chat-poktai-redirect:
+      rule: "Host(`chat.pokt.ai`) && !PathPrefix(`/.well-known/acme-challenge/`)"
+      service: chat-poktai-redirect
+      entryPoints:
+        - web
+      middlewares:
+        - redirect-to-https
+      priority: 999
+
+    poktai-auth-api:
+      rule: "Host(`pokt.ai`) && PathPrefix(`/api/auth`)"
+      service: poktai-web
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: https-resolver
+      priority: 450
+
+    poktai-members-api:
+      rule: "Host(`pokt.ai`) && PathPrefix(`/api/members`)"
+      service: poktai-web
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: https-resolver
+      priority: 440
+
+    poktai-invitations-api:
+      rule: "Host(`pokt.ai`) && PathPrefix(`/api/members/invitations`)"
+      service: poktai-web
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: https-resolver
+      priority: 435
+
+    poktai-production-api:
+      rule: "Host(`pokt.ai`) && PathPrefix(`/api/production`)"
+      service: poktai-web
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: https-resolver
+      priority: 430
+
+
+    poktai-gateway:
+      rule: "Host(`pokt.ai`) && PathPrefix(`/api/gateway`)"
+      service: poktai-web
+      middlewares:
+        - poktai-gateway-proxy
+        - poktai-gateway-buffering
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: https-resolver
+        # Ensure cert is valid for pokt.ai domain
+        domains:
+          - main: "pokt.ai"
+          - sans: ["*.pokt.ai"]
+      priority: 1000  # Highest priority - ensure gateway matches first
+
+    poktai-rpc-proxy:
+      rule: "Host(`pokt.ai`) && PathPrefix(`/api/rpc/`)"
+      service: poktai-web
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: https-resolver
+      priority: 200
+
+    poktai-billing-api:
+      rule: "Host(`pokt.ai`) && PathPrefix(`/api/billing`)"
+      service: poktai-web
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: https-resolver
+      priority: 160
+
+    poktai-usage-api:
+      rule: "Host(`pokt.ai`) && PathPrefix(`/api/usage`)"
+      service: poktai-web
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: https-resolver
+      priority: 165
+
+    poktai-endpoints-detail:
+      rule: "Host(`pokt.ai`) && PathRegexp(`^/api/endpoints/.+$`)"
+      service: poktai-web
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: https-resolver
+      priority: 300
+
+    poktai-endpoints-api:
+      rule: "Host(`pokt.ai`) && Path(`/api/endpoints`)"
+      service: poktai-web
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: https-resolver
+      priority: 150
+
+    poktai-auth-me:
+      rule: "Host(`pokt.ai`) && Path(`/api/auth/me`)"
+      service: poktai-web
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: https-resolver
+      priority: 500
+
+    poktai-customers-api:
+      rule: "Host(`pokt.ai`) && PathPrefix(`/api/customers`)"
+      service: poktai-web
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: https-resolver
+      priority: 190
+
+    poktai-organizations-api:
+      rule: "Host(`pokt.ai`) && PathPrefix(`/api/organizations`)"
+      service: poktai-api
+      entryPoints:
+        - web
+      priority: 180
+
+    poktai-networks-api: # New router for /api/networks
+      rule: "Host(`pokt.ai`) && PathPrefix(`/api/networks`)"
+      service: poktai-web
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: https-resolver
+      priority: 170
+    
+    poktai-networks-api-redirect:
+      rule: "Host(`pokt.ai`) && PathPrefix(`/api/networks`)"
+      service: poktai-web
+      entryPoints:
+        - web
+      middlewares:
+        - redirect-to-https
+      priority: 169
+
+    poktai-webhooks-api:
+      rule: "Host(`pokt.ai`) && PathPrefix(`/api/webhooks`)"
+      service: poktai-web
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: https-resolver
+      priority: 200
+
+    poktai-payment-api:
+      rule: "Host(`pokt.ai`) && PathPrefix(`/api/payment`)"
+      service: poktai-web
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: https-resolver
+      priority: 195
+
+    poktai-health-api: # New router for /api/health
+      rule: "PathPrefix(`/api/health`)"
+      service: poktai-api
+      entryPoints:
+        - web
+      priority: 500
+
+    poktai-dashboard-api:
+      rule: "Host(`pokt.ai`) && PathPrefix(`/api/dashboard`)"
+      service: poktai-web
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: https-resolver
+      priority: 170
+    
+    poktai-dashboard-api-redirect:
+      rule: "Host(`pokt.ai`) && PathPrefix(`/api/dashboard`)"
+      service: poktai-web
+      entryPoints:
+        - web
+      middlewares:
+        - redirect-to-https
+      priority: 169
+
+
+    poktai-admin-api:
+      rule: "Host(`pokt.ai`) && PathPrefix(`/api/admin`)"
+      service: poktai-web
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: https-resolver
+      priority: 90
+
+
+    poktai-api:
+      rule: "Host(`pokt.ai`) && PathPrefix(`/api`)"
+      service: poktai-api
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: https-resolver
+      priority: 100
+
+    poktai-web:
+      rule: "Host(`pokt.ai`)"
+      service: poktai-web
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: https-resolver
+      priority: 10
+
+    # HTTP to HTTPS redirect
+    poktai-web-redirect:
+      rule: "Host(`pokt.ai`)"
+      service: poktai-web
+      entryPoints:
+        - web
+      middlewares:
+        - redirect-to-https
+      priority: 20
+
+    # API catch-all for HTTP
+    poktai-api-http:
+      rule: "PathPrefix(`/api`)"
+      service: poktai-api
+      entryPoints:
+        - web
+      priority: 400
+
+    # Catch-all HTTP route for Web
+    poktai-web-http:
+      rule: "PathPrefix(`/`)"
+      service: poktai-web
+      entryPoints:
+        - web
+      priority: 1
+
+    # Default route for any host (HTTPS) - LOWEST PRIORITY
+    poktai-default:
+      rule: "HostRegexp(`.*`)"
+      service: poktai-web
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: https-resolver
+      priority: 1  # Lowest priority - only matches if nothing else does
+
+  middlewares:
+    poktai-api-strip:
+      stripPrefix:
+        prefixes:
+          - "/api"
+    
+    poktai-gateway-proxy:
+      replacePathRegex:
+        regex: "^/api/gateway(.*)$"
+        replacement: "/api/gateway$1"
+    
+    poktai-gateway-buffering:
+      buffering:
+        maxRequestBodyBytes: 10485760  # 10MB
+        maxResponseBodyBytes: 10485760
+        memRequestBodyBytes: 2097152  # 2MB
+        memResponseBodyBytes: 2097152
+        retryExpression: "IsNetworkError() && Attempts() < 2"
+    
+    redirect-to-https:
+      redirectScheme:
+        scheme: https
+        permanent: true
+
+  services:
+    chat-poktai:
+      loadBalancer:
+        servers:
+          - url: "http://51.195.63.173:3006"
+    
+    chat-poktai-redirect:
+      loadBalancer:
+        servers:
+          - url: "http://127.0.0.1:8080"
+
+    poktai-web:
+      loadBalancer:
+        servers:
+          - url: "http://172.17.0.1:4000"
+
+    poktai-api:
+      loadBalancer:
+        servers:
+          - url: "http://172.17.0.1:3001"
+    
+    poktai-web-redirect:
+      loadBalancer:
+        servers:
+          - url: "http://172.17.0.1:8080"
+    
+    poktai-gateway-service:
+      loadBalancer:
+        servers:
+          - url: "http://172.17.0.1:4000"

@@ -1,0 +1,33 @@
+http:
+  routers:
+    # Shannon RPC Gateway - HTTPS
+    shannon-rpc:
+      rule: "Host(`rpctest.pokt.ai`)"
+      service: shannon-rpc
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: https-resolver
+      priority: 100
+
+    # Shannon RPC Gateway - HTTP to HTTPS redirect
+    shannon-rpc-redirect:
+      rule: "Host(`rpctest.pokt.ai`)"
+      service: shannon-rpc
+      entryPoints:
+        - web
+      middlewares:
+        - redirect-to-https
+      priority: 100
+
+  middlewares:
+    redirect-to-https:
+      redirectScheme:
+        scheme: https
+        permanent: true
+
+  services:
+    shannon-rpc:
+      loadBalancer:
+        servers:
+          - url: "http://127.0.0.1:3069"

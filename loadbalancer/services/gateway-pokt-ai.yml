@@ -1,0 +1,37 @@
+http:
+  routers:
+    # PATH Gateway - HTTPS
+    gateway-pokt-ai:
+      rule: "Host(`gateway.pokt.ai`)"
+      service: path-gateway-service
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: https-resolver
+      priority: 100
+
+    # PATH Gateway - HTTP to HTTPS redirect
+    gateway-pokt-ai-redirect:
+      rule: "Host(`gateway.pokt.ai`)"
+      service: path-gateway-service
+      entryPoints:
+        - web
+      middlewares:
+        - redirect-to-https
+      priority: 100
+
+  middlewares:
+    redirect-to-https:
+      redirectScheme:
+        scheme: https
+        permanent: true
+
+  services:
+    path-gateway-service:
+      loadBalancer:
+        servers:
+          - url: "http://127.0.0.1:3069"
+        healthCheck:
+          path: "/health"
+          interval: "30s"
+          timeout: "5s"

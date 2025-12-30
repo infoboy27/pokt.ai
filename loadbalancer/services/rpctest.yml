@@ -1,0 +1,38 @@
+http:
+  routers:
+    # rpctest.pokt.ai - HTTPS
+    rpctest-pokt-https:
+      rule: "Host(`rpctest.pokt.ai`)"
+      service: rpctest-pokt
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: https-resolver
+      priority: 100
+
+    # rpctest.pokt.ai - HTTP to HTTPS redirect
+    rpctest-pokt-http:
+      rule: "Host(`rpctest.pokt.ai`)"
+      service: rpctest-pokt
+      entryPoints:
+        - web
+      middlewares:
+        - redirect-to-https
+      priority: 100
+
+  middlewares:
+    redirect-to-https:
+      redirectScheme:
+        scheme: https
+        permanent: true
+
+  services:
+    rpctest-pokt:
+      loadBalancer:
+        servers:
+          - url: "http://172.17.0.1:4002"
+        healthCheck:
+          path: "/health"
+          interval: "30s"
+          timeout: "5s"
+

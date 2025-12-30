@@ -1,0 +1,28 @@
+
+services:
+  traefik:
+    cpus: 4
+    mem_limit: 16G
+    image: traefik:3.2.3
+    container_name: traefik
+    restart: unless-stopped
+    network_mode: host
+    env_file: 
+    - .env
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik.yml:/traefik.yml:ro
+      - ./services/:/etc/traefik/services/:ro
+      - ./certs:/letsencrypt
+    labels:
+      - traefik.enable=true
+      - traefik.insecure=true
+      - traefik.http.routers.traefik-https.entrypoints=websecure
+      - "traefik.http.middlewares.auth-header.headers.customrequestheaders.Authorization=Basic ZG9nZTpzdXBlcmRvZ2UK"
+
+networks:
+  lb:
+    name: lb
+    external: true
+  poktia:
+    external: true

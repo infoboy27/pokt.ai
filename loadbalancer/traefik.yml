@@ -1,0 +1,72 @@
+log:
+  level: INFO
+
+entryPoints:
+  web:
+    address: ":80"
+  websecure:
+    address: ":443"
+  postgres:
+    address: ":15432"
+  metrics:
+    address: ":8082"
+  ping:
+    address: ":8083"
+
+metrics:
+  prometheus:
+    entryPoint: metrics
+    buckets:
+      - 0.1
+      - 0.3
+      - 1.2
+      - 5.0
+    addEntryPointsLabels: true
+    addRoutersLabels: true
+    addServicesLabels: true
+
+ping:
+  entryPoint: ping
+  manualRouting: true
+  terminatingStatusCode: 200
+
+api:
+  dashboard: true
+
+serversTransport:
+  insecureSkipVerify: true
+  maxIdleConnsPerHost: 2000  # Increased from 400 for high load (5x increase)
+
+certificatesresolvers:
+  https-resolver:
+    acme:
+      email: lowell@nodefleet.net
+      storage: /letsencrypt/acme.json
+      httpChallenge:
+        entryPoint: web
+
+  namecheap:
+    acme:
+      email: lowell@nodefleet.net
+      caServer: https://acme-v02.api.letsencrypt.org/directory
+      storage: /letsencrypt/acme.json
+      dnschallenge:
+        resolvers:
+          - "1.1.1.1:53"
+          - "1.0.0.1:53"
+        provider: namecheap 
+
+  cloudflare:
+    acme:
+      email: lowell@nodefleet.net 
+      storage: /letsencrypt/acme.json
+      dnschallenge:
+        resolvers:
+          - "1.1.1.1:53"
+          - "1.0.0.1:53"
+        provider: cloudflare 
+
+providers:
+  file:
+    directory: "/etc/traefik/services/"
+    watch: true

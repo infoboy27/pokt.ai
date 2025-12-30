@@ -1,0 +1,39 @@
+http:
+  routers:
+    # Grafana - HTTPS
+    grafana-monitor:
+      rule: "Host(`monitor.pokt.ai`)"
+      service: grafana-service
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+        domains:
+          - main: "monitor.pokt.ai"
+      priority: 100
+
+    # Grafana - HTTP to HTTPS redirect
+    grafana-monitor-redirect:
+      rule: "Host(`monitor.pokt.ai`)"
+      service: grafana-service
+      entryPoints:
+        - web
+      middlewares:
+        - redirect-to-https
+      priority: 100
+
+  middlewares:
+    redirect-to-https:
+      redirectScheme:
+        scheme: https
+        permanent: true
+
+  services:
+    grafana-service:
+      loadBalancer:
+        servers:
+          - url: "http://172.21.0.4:3000"
+        healthCheck:
+          path: "/api/health"
+          interval: "30s"
+          timeout: "5s"
